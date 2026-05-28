@@ -4,6 +4,8 @@ import type { HeaderPair, PageDebug, RunnerConfig, RunnerResult } from "./types"
 const DEFAULT_MAX_PAGES = 25;
 const DEFAULT_PAGE_SIZE = 100;
 const DEFAULT_TIMEOUT_MS = 25000;
+const GET_RETRY_ATTEMPTS = 2;
+const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 
 export class UpstreamError extends Error {
   constructor(
@@ -346,6 +348,37 @@ async function fetchWithTimeout(
   init: RequestInit,
   timeoutMs: number,
 ): Promise<Response> {
+  const method = (init.method ?? "GET").toUpperCase();
+  const attempts = method === "GET" ? GET_RETRY_ATTEMPTS + 1 : 1;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetchOnceWithTimeout(fetcher, url, init, timeoutMs);
+      if (attempt >= attempts - 1 || !RETRYABLE_STATUSES.has(response.status)) {
+        return response;
+      }
+
+      await sleep(getRetryDelayMs(response, attempt));
+    } catch (error) {
+      lastError = error;
+      if (attempt >= attempts - 1) {
+        throw error;
+      }
+
+      await sleep(getRetryDelayMs(undefined, attempt));
+    }
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Upstream request failed");
+}
+
+async function fetchOnceWithTimeout(
+  fetcher: typeof fetch,
+  url: string,
+  init: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort("Request timed out"), timeoutMs);
 
@@ -354,6 +387,27 @@ async function fetchWithTimeout(
   } finally {
     clearTimeout(timer);
   }
+}
+
+function getRetryDelayMs(response: Response | undefined, attempt: number): number {
+  const retryAfter = response?.headers.get("retry-after");
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds)) {
+      return Math.min(Math.max(seconds * 1000, 100), 5000);
+    }
+
+    const dateDelay = Date.parse(retryAfter) - Date.now();
+    if (Number.isFinite(dateDelay)) {
+      return Math.min(Math.max(dateDelay, 100), 5000);
+    }
+  }
+
+  return 250 * 2 ** attempt + Math.floor(Math.random() * 100);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function cleanHeaderPairs(headers: HeaderPair[] | undefined): HeaderPair[] {

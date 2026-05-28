@@ -1,668 +1,562 @@
-export function renderApp(): string {
+export function renderApp(basePath = ""): string {
+  const runPathExample = `${basePath}/<runner-id>`;
+
   return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Clay Pagination Runner</title>
+  <title>Clay pagination runner</title>
   <style>
     :root {
       color-scheme: light;
       --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
-      --color-content-primary: #16181f;
-      --color-content-secondary: #525a69;
-      --color-content-tertiary: #717989;
-      --color-content-action: #0382f7;
-      --color-content-danger: #dd2c53;
-      --color-content-success: #0dac65;
-      --color-content-inverse: #ffffff;
-      --color-bg-primary: #ffffff;
-      --color-bg-secondary: #f7f8f9;
-      --color-bg-primary-hover: #eff1f3;
-      --color-bg-blue: #ecf6ff;
-      --color-bg-green: #eefff1;
-      --color-bg-red: #fff1f2;
-      --color-bg-yellow: #fff8d2;
-      --color-bg-purple-light: #f5f3ff;
-      --color-bg-action-inverse: #0382f7;
-      --color-bg-action-inverse-hover: #0667d9;
-      --color-border-primary: #d6d9df;
-      --color-border-secondary: #e6e8ec;
-      --color-border-action: #3ea2fd;
-      --color-outline-focus-ring: #b8ddff;
-      --color-text-blue: #0667d9;
-      --color-text-green: #078a52;
-      --color-text-red: #dd2c53;
-      --color-text-yellow: #b37601;
-      --color-text-purple: #7934f0;
+      --content: #16181f;
+      --secondary: #525a69;
+      --tertiary: #717989;
+      --action: #0382f7;
+      --action-hover: #0667d9;
+      --danger: #dd2c53;
+      --success: #0dac65;
+      --bg: #f7f8f9;
+      --surface: #ffffff;
+      --surface-soft: #f7f8f9;
+      --blue-soft: #ecf6ff;
+      --green-soft: #eefff1;
+      --red-soft: #fff1f2;
+      --yellow-soft: #fff8d2;
+      --border: #d6d9df;
+      --border-soft: #e6e8ec;
+      --focus: #b8ddff;
       --radius-sm: 4px;
       --radius-md: 6px;
       --radius-lg: 8px;
-      --radius-full: 9999px;
-      --shadow-md: 0 2px 4px rgba(22,24,31,0.04), 0 8px 16px rgba(22,24,31,0.05);
-      --bg: var(--color-bg-secondary);
-      --panel: var(--color-bg-primary);
-      --ink: var(--color-content-primary);
-      --muted: var(--color-content-secondary);
-      --line: var(--color-border-primary);
-      --accent: var(--color-content-action);
-      --accent-ink: var(--color-content-inverse);
-      --danger: var(--color-content-danger);
-      --ok: var(--color-content-success);
-      --code: #16181f;
-      --shadow: 0 1px 2px rgba(22,24,31,0.06);
-      font-family: var(--font-sans);
     }
-
     * { box-sizing: border-box; }
     body {
       margin: 0;
       background: var(--bg);
-      color: var(--ink);
+      color: var(--content);
+      font-family: var(--font-sans);
       font-size: 14px;
       line-height: 1.45;
     }
     header {
+      height: 48px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-      padding: 18px 24px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--line);
+      gap: 10px;
+      padding: 0 16px;
+      background: var(--surface);
+      border-bottom: 0.5px solid var(--border);
       position: sticky;
       top: 0;
-      z-index: 5;
+      z-index: 4;
     }
+    header svg { width: 22px; height: 22px; flex: none; }
     h1 {
       margin: 0;
-      font-size: 18px;
-      font-weight: 650;
+      font-size: 14px;
+      font-weight: 600;
       letter-spacing: 0;
     }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      min-width: 0;
-    }
-    .brand svg {
-      width: 22px;
-      height: 22px;
-      flex: none;
-    }
     h2 {
-      margin: 0 0 14px;
-      font-size: 15px;
-      font-weight: 650;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+    h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 600;
       letter-spacing: 0;
     }
     main {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
-      gap: 16px;
-      padding: 16px;
-      max-width: 1440px;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 12px;
+      padding: 12px;
+      max-width: 1360px;
       margin: 0 auto;
     }
-    main > aside {
-      grid-column: 2;
-      grid-row: 1;
-    }
-    main > div.stack {
-      grid-column: 1;
-      grid-row: 1;
-    }
-    section {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
-      padding: 16px;
+    .panel {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
       min-width: 0;
     }
-    .stack { display: grid; gap: 12px; }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 0.5px solid var(--border-soft);
+    }
+    .panel-body {
+      display: grid;
+      gap: 14px;
+      padding: 16px;
+    }
+    .section {
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border: 0.5px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+    }
+    .pagination-group {
+      display: grid;
+      gap: 10px;
+    }
+    .pagination-group[hidden] { display: none; }
+    .section-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-copy {
+      color: var(--secondary);
+      font-size: 13px;
+      font-weight: 500;
+      max-width: 860px;
+    }
+    .step {
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--action);
+      font-size: 12px;
+      font-weight: 600;
+      flex: none;
+    }
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      gap: 10px;
     }
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 10px;
     }
     label {
       display: grid;
-      gap: 6px;
-      font-weight: 600;
-      color: #344054;
+      gap: 5px;
       min-width: 0;
+      color: var(--content);
+      font-size: 12px;
+      font-weight: 600;
     }
     input, select, textarea {
       width: 100%;
-      border: 1px solid #c9d1dc;
-      border-radius: 6px;
-      padding: 9px 10px;
-      color: var(--ink);
-      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 8px 9px;
+      color: var(--content);
+      background: var(--surface);
       font: inherit;
+      font-size: 13px;
       letter-spacing: 0;
     }
     textarea {
-      min-height: 88px;
+      min-height: 78px;
       resize: vertical;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-family: var(--font-mono);
       font-size: 12px;
     }
-    input:focus, select:focus, textarea:focus {
-      outline: 2px solid rgba(18, 106, 111, 0.22);
-      outline-color: var(--color-outline-focus-ring);
-      border-color: var(--color-border-action);
+    textarea.tall {
+      min-height: 170px;
+    }
+    input[type="file"] {
+      padding: 7px;
+    }
+    input:focus, select:focus, textarea:focus, button:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 0;
+      border-color: var(--action);
+    }
+    input:disabled, select:disabled, textarea:disabled {
+      color: var(--tertiary);
+      background: var(--surface-soft);
     }
     button {
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 6px;
-      border: 1px solid #aeb8c7;
-      border-radius: 6px;
-      background: #fff;
-      color: var(--ink);
-      min-height: 38px;
-      padding: 8px 12px;
-      font-weight: 650;
+      min-height: 32px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      background: var(--surface);
+      color: var(--content);
+      padding: 7px 11px;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
       cursor: pointer;
+      white-space: nowrap;
     }
+    button:hover:not(:disabled) { background: var(--surface-soft); }
     button.primary {
-      background: var(--color-bg-action-inverse);
-      color: var(--accent-ink);
-      border-color: var(--color-bg-action-inverse);
+      color: #fff;
+      border-color: var(--action);
+      background: var(--action);
     }
-    button.danger {
-      border-color: #f0b8b3;
-      color: var(--danger);
+    button.primary:hover:not(:disabled) { background: var(--action-hover); }
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
     }
-    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .hint {
+      color: var(--secondary);
+      font-size: 12px;
+      font-weight: 500;
+    }
+    .muted {
+      color: var(--secondary);
+      font-weight: 500;
+    }
+    .required { color: var(--danger); }
     .actions {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
     }
-    .muted { color: var(--muted); font-weight: 500; }
-    .help {
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: 500;
-      line-height: 1.35;
-    }
-    .required {
-      color: var(--danger);
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .guide {
+    .header-row {
       display: grid;
-      gap: 10px;
-      color: #344054;
+      grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) 32px;
+      gap: 8px;
+      align-items: end;
     }
-    .guide ol, .guide ul {
-      margin: 0;
-      padding-left: 18px;
-    }
-    .guide li + li { margin-top: 6px; }
-    .callout {
-      border: 1px solid #b8d8db;
-      border-radius: 8px;
+    .notice {
+      border: 0.5px solid #b8ddff;
+      background: var(--blue-soft);
+      color: #01418d;
+      border-radius: var(--radius-md);
       padding: 10px;
-      background: #f0fbfc;
-      color: #24484c;
-    }
-    .stepper {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .step-button {
-      justify-content: flex-start;
-      min-height: 48px;
-      padding: 8px;
-      border-color: var(--color-border-primary);
-      background: var(--color-bg-primary);
-    }
-    .step-button.active {
-      border-color: var(--color-border-action);
-      box-shadow: inset 0 0 0 1px var(--color-border-action);
-      background: var(--color-bg-blue);
-    }
-    .step-index {
-      display: inline-grid;
-      place-items: center;
-      width: 22px;
-      height: 22px;
-      border-radius: 999px;
-      background: var(--color-bg-secondary);
-      color: var(--color-content-secondary);
       font-size: 12px;
-      font-weight: 600;
-      flex: none;
-    }
-    .step-button.active .step-index {
-      background: var(--color-bg-action-inverse);
-      color: var(--color-content-inverse);
-    }
-    .step-title {
-      display: grid;
-      gap: 2px;
-      min-width: 0;
-    }
-    .step-title strong {
-      font-size: 13px;
-      font-weight: 600;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .step-title span {
-      color: var(--color-content-secondary);
-      font-size: 11px;
       font-weight: 500;
+    }
+    .locked {
+      border-color: #fdd4b7;
+      background: #fff3ed;
+      color: #752b12;
+    }
+    .status {
+      min-height: 20px;
+      font-weight: 600;
+    }
+    .status.ok { color: var(--success); }
+    .status.err { color: var(--danger); }
+    .url-box {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-md);
+      background: var(--surface-soft);
+    }
+    .prompt-box {
+      min-height: 220px;
+      color: var(--content);
+      background: var(--surface-soft);
+    }
+    code, pre {
+      font-family: var(--font-mono);
+      font-size: 12px;
+    }
+    code { overflow-wrap: anywhere; }
+    pre {
+      margin: 0;
+      max-height: 320px;
+      overflow: auto;
+      color: #eef1f5;
+      background: #16181f;
+      border-radius: var(--radius-md);
+      padding: 12px;
+      line-height: 1.5;
+    }
+    aside {
+      display: grid;
+      gap: 12px;
+      align-content: start;
+    }
+    .saved-list {
+      display: grid;
+      gap: 8px;
+      max-height: 360px;
+      overflow: auto;
+    }
+    .saved-item {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 3px 8px;
+      justify-content: stretch;
+      text-align: left;
+      min-height: 48px;
+    }
+    .saved-item strong, .saved-item small {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .flow-section[hidden] { display: none; }
-    .step-actions {
-      display: flex;
-      justify-content: space-between;
+    .saved-item small { grid-column: 1 / -1; color: var(--secondary); font-weight: 500; }
+    .volume { color: var(--action); font-size: 12px; font-weight: 600; }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 8px;
+    }
+    .metric {
+      border: 0.5px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      padding: 10px;
+      background: var(--surface-soft);
+    }
+    .metric span {
+      display: block;
+      color: var(--secondary);
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .metric strong {
+      display: block;
       margin-top: 4px;
+      font-size: 18px;
+      font-weight: 600;
     }
     .pill {
       display: inline-flex;
       align-items: center;
       border-radius: 999px;
-      border: 1px solid var(--line);
       padding: 3px 8px;
-      font-size: 12px;
-      color: #475467;
-      background: #fff;
-    }
-    .saved-list {
-      display: grid;
-      gap: 8px;
-      max-height: calc(100vh - 200px);
-      overflow: auto;
-    }
-    .saved-item {
-      width: 100%;
-      text-align: left;
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
-      gap: 4px 8px;
-      min-height: 0;
-      justify-content: stretch;
-      align-items: stretch;
-    }
-    .saved-item strong, .saved-item span, .saved-item small {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .saved-item .target { grid-column: 1 / -1; }
-    .saved-item .volume {
-      color: var(--accent);
-      font-weight: 700;
-      font-size: 12px;
-    }
-    .toolbar {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-    .divider {
-      height: 1px;
-      background: var(--line);
-      margin: 4px 0;
-    }
-    pre {
-      margin: 0;
-      max-height: 420px;
-      overflow: auto;
-      background: var(--code);
-      color: #eef4ff;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 12px;
-      line-height: 1.5;
-    }
-    .status {
-      min-height: 20px;
-      font-weight: 650;
-    }
-    .status.ok { color: var(--ok); }
-    .status.err { color: var(--danger); }
-    .url-box {
-      display: grid;
-      gap: 8px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 12px;
-      background: #fbfcfe;
-    }
-    .metrics {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 8px;
-    }
-    .metric {
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
-      background: #fbfcfe;
-      min-width: 0;
-    }
-    .metric span {
-      display: block;
-      color: var(--muted);
+      background: var(--surface-soft);
+      border: 0.5px solid var(--border-soft);
+      color: var(--secondary);
       font-size: 12px;
       font-weight: 600;
     }
-    .metric strong {
-      display: block;
-      margin-top: 3px;
-      font-size: 20px;
-      line-height: 1.1;
-      overflow-wrap: anywhere;
-    }
-    .recent-runs {
-      display: grid;
-      gap: 6px;
-    }
     .chart {
-      min-height: 190px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 10px;
-      background: #fbfcfe;
-      overflow-x: auto;
-    }
-    .chart svg {
-      display: block;
-      width: 100%;
-      min-width: 520px;
-      height: 170px;
-    }
-    .locked-notice {
-      border: 1px solid #d5c7a3;
-      border-radius: 8px;
-      padding: 10px;
-      background: #fff9e8;
-      color: #614a12;
-    }
-    .run-row {
-      display: grid;
-      grid-template-columns: 84px 80px repeat(4, minmax(70px, 1fr));
-      gap: 8px;
-      align-items: center;
-      border-bottom: 1px solid var(--line);
-      padding: 8px 0;
-      color: #344054;
-      font-size: 12px;
-    }
-    .run-row:last-child { border-bottom: 0; }
-    code {
-      overflow-wrap: anywhere;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: 12px;
-    }
-    .header-row {
-      display: grid;
-      grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) 38px;
-      gap: 8px;
+      display: flex;
       align-items: end;
+      gap: 6px;
+      min-height: 96px;
+      padding: 10px;
+      border: 0.5px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--surface-soft);
+      overflow: auto;
     }
-    @media (max-width: 900px) {
-      header { position: static; padding: 14px 16px; }
-      main { grid-template-columns: 1fr; padding: 12px; }
-      main > aside, main > div.stack { grid-column: 1; grid-row: auto; }
+    .bar {
+      width: 18px;
+      min-height: 2px;
+      border-radius: 3px 3px 0 0;
+      background: var(--action);
+      flex: none;
+    }
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; }
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .header-row { grid-template-columns: 1fr; }
-      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .run-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .stepper { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="brand">
-      <svg viewBox="0 0 128 128" aria-hidden="true">
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M107.357 128C108.416 128 109.275 127.142 109.275 126.083L109.275 1.9175C109.275 0.858509 108.416 0.0000282862 107.357 0.000028101L69.8901 0.00002155C57.6202 0.0000194047 42.6613 3.90392 30.0048 14.6158C15.9247 26.5325 8.00001 44.132 8.00001 64C8.00001 83.868 15.9247 101.467 30.0048 113.384C42.6613 124.096 57.6202 128 69.8901 128L107.357 128Z" fill="#3BD3FD"></path>
-        <path fill-rule="evenodd" clip-rule="evenodd" d="M109.276 106.198L109.276 21.8021L69.8911 21.8021C61.7869 21.8021 51.846 24.3919 43.5485 31.3374C34.5392 38.8786 29.0999 50.219 29.0999 63.9999C29.0999 77.7808 34.5392 89.1212 43.5484 96.6624C51.846 103.608 61.7869 106.198 69.8911 106.198L109.276 106.198Z" fill="#FE5D75"></path>
-        <path d="M109.274 42.901L69.8897 42.901C62.0127 42.901 50.1974 48.1757 50.1974 63.9999C50.1974 79.8241 62.0127 85.0988 69.8897 85.0988H109.274V42.901Z" fill="#FFCB00"></path>
-      </svg>
-      <h1>Pagination runner</h1>
-    </div>
-    <div class="actions">
-      <label style="min-width: 220px;">
-        <span class="muted">Admin token</span>
-        <input id="adminToken" type="password" autocomplete="off">
-      </label>
-      <button id="refreshBtn" type="button">Refresh</button>
-    </div>
+    <svg viewBox="0 0 128 128" aria-hidden="true">
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M107.357 128C108.416 128 109.275 127.142 109.275 126.083L109.275 1.9175C109.275 0.858509 108.416 0.0000282862 107.357 0.000028101L69.8901 0.00002155C57.6202 0.0000194047 42.6613 3.90392 30.0048 14.6158C15.9247 26.5325 8.00001 44.132 8.00001 64C8.00001 83.868 15.9247 101.467 30.0048 113.384C42.6613 124.096 57.6202 128 69.8901 128L107.357 128Z" fill="#3BD3FD"></path>
+      <path fill-rule="evenodd" clip-rule="evenodd" d="M109.276 106.198L109.276 21.8021L69.8911 21.8021C61.7869 21.8021 51.846 24.3919 43.5485 31.3374C34.5392 38.8786 29.0999 50.219 29.0999 63.9999C29.0999 77.7808 34.5392 89.1212 43.5484 96.6624C51.846 103.608 61.7869 106.198 69.8911 106.198L109.276 106.198Z" fill="#FE5D75"></path>
+      <path d="M109.274 42.901L69.8897 42.901C62.0127 42.901 50.1974 48.1757 50.1974 63.9999C50.1974 79.8241 62.0127 85.0988 69.8897 85.0988H109.274V42.901Z" fill="#FFCB00"></path>
+    </svg>
+    <h1>Pagination runner</h1>
   </header>
+
   <main>
-    <aside class="stack">
-      <section>
-        <div class="toolbar">
-          <h2>Configurations</h2>
-          <button id="newBtn" type="button">New</button>
+    <section class="panel">
+      <div class="panel-head">
+        <div>
+          <h2>Create runner</h2>
+          <div class="hint">Test first. Save once. Use the generated URL in Clay.</div>
         </div>
-        <div class="help" style="margin-bottom: 10px;">Sorted by Clay call volume. Saved configurations are immutable.</div>
-        <div id="savedList" class="saved-list"></div>
+        <button id="newBtn" type="button">New runner</button>
+      </div>
+      <div class="panel-body">
+        <div id="lockedNotice" class="notice locked" hidden>This runner is locked. Create a new runner for changes.</div>
+
+        <div class="section">
+          <div class="section-title"><span class="step">AI</span><h3>AI setup helper</h3></div>
+          <div class="section-copy">Use this when you have API docs but do not know which fields to enter. Add the docs URL, upload or paste docs if you have them, then copy the generated prompt into Claude, ChatGPT, or another AI. The AI should return exact values for every form field below.</div>
+          <div class="grid-2">
+            <label>API documentation URL<input id="docsUrl" placeholder="https://docs.example.com/api/list-endpoint"></label>
+            <label>What data do you want Clay to fetch?<input id="docsGoal" placeholder="Example: G2 buyer intent event stream for a date range"></label>
+          </div>
+          <label>Documentation file<input id="docsFile" type="file" accept=".txt,.md,.json,.yaml,.yml,.html,.htm,.csv"></label>
+          <label>Paste docs excerpt or notes<textarea id="docsExcerpt" class="tall" spellcheck="false" placeholder="Optional. Paste the pagination section, endpoint example response, auth notes, or copied file text here."></textarea></label>
+          <div class="actions">
+            <button id="generatePromptBtn" class="primary" type="button">Generate AI prompt</button>
+            <button id="copyPromptBtn" type="button">Copy prompt</button>
+            <span id="promptStatus" class="hint"></span>
+          </div>
+          <label>Prompt to paste into AI<textarea id="aiPrompt" class="prompt-box" readonly spellcheck="false"></textarea></label>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="step">1</span><h3>Endpoint</h3></div>
+          <div class="section-copy">Enter the upstream API endpoint exactly as the API expects it. If a credential must live in the URL, use a placeholder such as <code>{{key}}</code>; Clay will pass the value on the generated runner URL at run time.</div>
+          <div class="grid-2">
+            <label>Name <span class="required">required</span><input id="name" value="G2 Buyer Stream v2 API"></label>
+            <label>Method
+              <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option></select>
+            </label>
+          </div>
+          <label>Target URL <span class="required">required</span><input id="targetUrl" value="https://data.g2.com/api/v1/ahoy/remote-event-streams"></label>
+          <div class="hint">For URL keys, use placeholders like <code>https://api.com/call?api={{key}}</code>. Clay will call <code>${runPathExample}?key=...</code>.</div>
+          <div class="grid-3">
+            <label>Results path <span class="required">required</span><input id="resultPath" value="data"></label>
+            <label>Response
+              <select id="responseMode"><option value="array">Array</option><option value="envelope">Envelope</option></select>
+            </label>
+            <label>Max items<input id="maxItems" type="number" min="1" placeholder="Optional"></label>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="step">2</span><h3>Pagination</h3></div>
+          <div class="section-copy">Choose the pagination style from the API docs. Start conservatively, test with a small page size, then raise page size or max pages after the sample output looks right.</div>
+          <div class="grid-3">
+            <label>Type
+              <select id="paginationType">
+                <option value="jsonapi">JSON next link</option>
+                <option value="page">Page number</option>
+                <option value="offset">Offset limit</option>
+                <option value="cursor">Cursor</option>
+                <option value="linkHeader">Link header</option>
+                <option value="none">None</option>
+              </select>
+            </label>
+            <label>Max pages <span class="required">required</span><input id="maxPages" type="number" min="1" max="250" value="25"></label>
+            <label>Page size<input id="pageSize" type="number" min="1" value="25"></label>
+          </div>
+          <div class="pagination-group" data-pagination-group="page">
+            <div class="hint">Use this for APIs that paginate with page numbers. JSON next link also follows <code>links.next</code> when present.</div>
+            <div class="grid-3">
+              <label>Page param<input id="pageParam" value="page[number]"></label>
+              <label>Page size param<input id="pageSizeParam" value="page[size]"></label>
+              <label>Start page<input id="startPage" type="number" min="1" value="1"></label>
+            </div>
+            <div class="grid-2">
+              <label>Next link path<input id="nextLinkPath" value="links.next"></label>
+              <label>Total pages path<input id="totalPagesPath" value="meta.page_count"></label>
+            </div>
+          </div>
+          <div class="pagination-group" data-pagination-group="offset" hidden>
+            <div class="hint">Use this for APIs that ask for an offset and limit.</div>
+            <div class="grid-3">
+              <label>Offset param<input id="offsetParam" value="offset"></label>
+              <label>Limit param<input id="limitParam" value="limit"></label>
+              <label>Start offset<input id="startOffset" type="number" min="0" value="0"></label>
+            </div>
+          </div>
+          <div class="pagination-group" data-pagination-group="cursor" hidden>
+            <div class="hint">Use this for APIs that return a cursor for the next page.</div>
+            <div class="grid-2">
+              <label>Cursor param<input id="cursorParam" value="cursor"></label>
+              <label>Next cursor path<input id="nextCursorPath" value="meta.next_cursor"></label>
+            </div>
+            <label>Initial cursor<input id="initialCursor"></label>
+          </div>
+          <div class="pagination-group" data-pagination-group="linkHeader" hidden>
+            <div class="hint">Use this for APIs that return the next page in the HTTP <code>Link</code> header.</div>
+          </div>
+          <div class="pagination-group" data-pagination-group="none" hidden>
+            <div class="hint">Use this when the endpoint returns everything in one response.</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="step">3</span><h3>Auth and test</h3></div>
+          <div class="section-copy">List only the header names Clay should forward at run time. Use test credentials here to verify the runner; test credentials and query values are not saved.</div>
+          <label>Pass-through headers<input id="passThroughHeaders" value="authorization,x-api-key,api-key"></label>
+          <div class="hint">Header values come from Clay at run time. They are never stored.</div>
+          <div class="actions">
+            <strong class="muted">Static headers</strong>
+            <button id="addStaticHeader" type="button">Add static header</button>
+          </div>
+          <div id="staticHeaders"></div>
+          <div class="actions">
+            <strong class="muted">Test credentials</strong>
+            <button id="addCredentialHeader" type="button">Add test header</button>
+          </div>
+          <div id="credentialHeaders"></div>
+          <label>Test query params<input id="queryString" placeholder="filter[start_time]=2026-05-27T00:00:00Z or key=api-key"></label>
+          <label>Body template<textarea id="bodyTemplate" spellcheck="false"></textarea></label>
+          <div class="actions"><button id="testBtn" class="primary" type="button">Run test</button><span class="hint">Test credentials and query params are not saved.</span></div>
+          <pre id="output">{}</pre>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="step">4</span><h3>Save and connect</h3></div>
+          <div class="section-copy">Save only after testing. Saved runners are locked so live Clay tables keep a stable URL and behavior.</div>
+          <div id="urlShape" class="hint"></div>
+          <div class="notice">Saving creates a stable URL. Saved runners cannot be edited or deleted.</div>
+          <div class="actions"><button id="saveBtn" type="button">Save runner</button><div id="status" class="status"></div></div>
+          <div id="runUrl" class="url-box" hidden>
+            <strong>Clay URL</strong>
+            <code id="runUrlText"></code>
+            <div class="actions"><button id="copyBtn" type="button">Copy URL</button></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside>
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Configurations</h2>
+            <div class="hint">Sorted by Clay call volume.</div>
+          </div>
+          <button id="refreshBtn" type="button">Refresh</button>
+        </div>
+        <div class="panel-body"><div id="savedList" class="saved-list"></div></div>
       </section>
-      <section class="guide">
-        <h2>Setup guide</h2>
-        <ol>
-          <li>Enter the upstream API endpoint and method. The same normalized URL and method can only be saved once.</li>
-          <li>Use <code>{{name}}</code> placeholders for URL-only secrets, then pass them on the Clay URL as query params.</li>
-          <li>Choose where the response array lives, pick pagination, and run a test with temporary credentials.</li>
-          <li>Save only after the test looks right. Name, URL, method, and all pagination settings cannot be changed later.</li>
-        </ol>
-        <div class="callout">
-          Credentials are not saved. Put tokens in Test credentials for previewing, then configure the same header in Clay so it is passed through at run time.
+
+      <section id="analyticsPanel" class="panel" hidden>
+        <div class="panel-head">
+          <h2>Analytics</h2>
+          <button id="analyticsRefreshBtn" type="button">Refresh</button>
+        </div>
+        <div class="panel-body">
+          <div class="metrics">
+            <div class="metric"><span>Total calls</span><strong id="metricTotalRuns">0</strong></div>
+            <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
+            <div class="metric"><span>Items returned</span><strong id="metricItems">0</strong></div>
+            <div class="metric"><span>Avg duration</span><strong id="metricDuration">0 ms</strong></div>
+          </div>
+          <div id="statusCounts" class="actions"></div>
+          <div id="statusChart" class="chart"></div>
+          <div id="recentRuns" class="hint"></div>
         </div>
       </section>
     </aside>
-    <div class="stack">
-      <section class="stack">
-        <div class="stepper" aria-label="Create runner progress">
-          <button class="step-button active" type="button" data-step-button="1">
-            <span class="step-index">1</span>
-            <span class="step-title"><strong>Endpoint</strong><span>Name and response shape</span></span>
-          </button>
-          <button class="step-button" type="button" data-step-button="2">
-            <span class="step-index">2</span>
-            <span class="step-title"><strong>Pagination</strong><span>How pages advance</span></span>
-          </button>
-          <button class="step-button" type="button" data-step-button="3">
-            <span class="step-index">3</span>
-            <span class="step-title"><strong>Auth and test</strong><span>Preview before saving</span></span>
-          </button>
-          <button class="step-button" type="button" data-step-button="4">
-            <span class="step-index">4</span>
-            <span class="step-title"><strong>Save and connect</strong><span>Generate Clay URL</span></span>
-          </button>
-        </div>
-      </section>
-
-      <section class="stack flow-section" data-flow-step="1">
-        <div class="toolbar">
-          <h2>Endpoint</h2>
-          <span id="currentId" class="pill">Unsaved</span>
-        </div>
-        <div id="immutableNotice" class="locked-notice" hidden>This saved configuration is locked to protect live Clay workflows. Create a new runner for any changes.</div>
-        <div class="grid-2">
-          <label>Name <span class="required">Required</span><input id="name" autocomplete="off" value="G2 Buyer Intent events"><span class="help">A short label for the saved runner.</span></label>
-          <label>Method
-            <select id="method">
-              <option>GET</option>
-              <option>POST</option>
-              <option>PUT</option>
-              <option>PATCH</option>
-            </select>
-            <span class="help">Saved configurations are unique by method plus normalized target URL.</span>
-          </label>
-        </div>
-        <label>Target URL <span class="required">Required</span><input id="targetUrl" autocomplete="off" value="https://data.g2.com/api/v1/ahoy/remote-event-streams"><span class="help">Use the upstream list endpoint. URL placeholders like <code>{{key}}</code> are filled from Clay URL query params and then removed from normal query forwarding.</span></label>
-        <div class="grid-3">
-          <label>Results path <span class="required">Required</span><input id="resultPath" value="data"><span class="help">Dot path to the array in each page response.</span></label>
-          <label>Response
-            <select id="responseMode">
-              <option value="array">Array</option>
-              <option value="envelope">Envelope</option>
-            </select>
-            <span class="help">Array is easiest for Clay. Envelope adds metadata.</span>
-          </label>
-          <label>Max items<input id="maxItems" type="number" min="1" placeholder="Optional"><span class="help">Optional hard cap across all pages.</span></label>
-        </div>
-        <div class="step-actions">
-          <span class="help">Start with the API’s list endpoint and the path to the array you want Clay to receive.</span>
-          <button type="button" data-next-step="2">Continue</button>
-        </div>
-      </section>
-
-      <section class="stack flow-section" data-flow-step="2" hidden>
-        <div class="toolbar">
-          <h2>Pagination</h2>
-          <span class="pill">Step 2</span>
-        </div>
-        <div class="divider"></div>
-        <div class="grid-3">
-          <label>Pagination
-            <select id="paginationType">
-              <option value="jsonapi">JSON next link</option>
-              <option value="page">Page number</option>
-              <option value="offset">Offset limit</option>
-              <option value="cursor">Cursor</option>
-              <option value="linkHeader">Link header</option>
-              <option value="none">None</option>
-            </select>
-            <span class="help">G2 uses JSON next link with <code>links.next</code>.</span>
-          </label>
-          <label>Max pages <span class="required">Required</span><input id="maxPages" type="number" min="1" max="250" value="25"><span class="help">Safety limit to prevent runaway pagination.</span></label>
-          <label>Page size<input id="pageSize" type="number" min="1" value="25"><span class="help">For G2 BuyerIntent::EventStreams, use 25.</span></label>
-        </div>
-        <div class="grid-3">
-          <label>Page param<input id="pageParam" value="page[number]"><span class="help">Used by JSON next link and page-number modes.</span></label>
-          <label>Page size param<input id="pageSizeParam" value="page[size]"><span class="help">Used when the API accepts a page size parameter.</span></label>
-          <label>Start page<input id="startPage" type="number" min="1" value="1"><span class="help">Usually 1.</span></label>
-        </div>
-        <div class="grid-2">
-          <label>Next link path<input id="nextLinkPath" value="links.next"><span class="help">Dot path to the next page URL.</span></label>
-          <label>Total pages path<input id="totalPagesPath" value="meta.page_count"><span class="help">Fallback for page-number APIs.</span></label>
-        </div>
-        <div class="grid-3">
-          <label>Offset param<input id="offsetParam" value="offset"></label>
-          <label>Limit param<input id="limitParam" value="limit"></label>
-          <label>Start offset<input id="startOffset" type="number" min="0" value="0"></label>
-        </div>
-        <div class="grid-2">
-          <label>Cursor param<input id="cursorParam" value="cursor"></label>
-          <label>Next cursor path<input id="nextCursorPath" value="meta.next_cursor"></label>
-        </div>
-        <label>Initial cursor<input id="initialCursor"></label>
-        <div class="step-actions">
-          <button type="button" data-next-step="1">Back</button>
-          <button type="button" data-next-step="3">Continue</button>
-        </div>
-      </section>
-
-      <section class="stack flow-section" data-flow-step="3" hidden>
-        <div class="toolbar">
-          <h2>Auth and test</h2>
-          <button id="addStaticHeader" type="button">Add static header</button>
-        </div>
-        <label>Pass-through headers<input id="passThroughHeaders" value="authorization,x-api-key,api-key"><span class="help">Header names accepted from Clay and forwarded upstream. Values are never stored.</span></label>
-        <div id="staticHeaders" class="stack"></div>
-        <div class="divider"></div>
-        <div class="toolbar">
-          <h2>Test credentials</h2>
-          <button id="addCredentialHeader" type="button">Add credential header</button>
-        </div>
-        <div id="credentialHeaders" class="stack"></div>
-        <div class="callout">Do not add API tokens as static headers. Static headers are persisted for non-secret values such as content type or API version.</div>
-        <label>Clay query passthrough<input id="queryString" placeholder="filter[start_time]=2026-05-27T00:00:00Z or key=api-key"><span class="help">Test-only query params. Placeholder params such as <code>key</code> are substituted in memory and never stored.</span></label>
-        <label>Body template<textarea id="bodyTemplate" spellcheck="false"></textarea><span class="help">Optional saved request body for POST, PUT, or PATCH runners.</span></label>
-        <div class="actions">
-          <button id="testBtn" class="primary" type="button">Run test</button>
-        </div>
-        <pre id="output">{}</pre>
-        <div class="step-actions">
-          <button type="button" data-next-step="2">Back</button>
-          <button type="button" data-next-step="4">Continue</button>
-        </div>
-      </section>
-
-      <section id="analyticsPanel" class="stack flow-section" data-flow-step="4" hidden>
-        <div class="toolbar">
-          <h2>Analytics</h2>
-          <button id="analyticsRefreshBtn" type="button">Refresh analytics</button>
-        </div>
-        <div class="metrics">
-          <div class="metric"><span>Total calls</span><strong id="metricTotalRuns">0</strong></div>
-          <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
-          <div class="metric"><span>Items returned</span><strong id="metricItems">0</strong></div>
-          <div class="metric"><span>Avg duration</span><strong id="metricDuration">0 ms</strong></div>
-        </div>
-        <div id="statusCounts" class="actions"></div>
-        <div id="statusChart" class="chart"></div>
-        <div class="help">Analytics are metadata-only: counts, timing, page totals, item totals, status, and error codes. No request headers, query params, request bodies, upstream URLs, or response rows are stored.</div>
-        <div id="recentRuns" class="recent-runs"></div>
-      </section>
-
-      <section class="stack flow-section" data-flow-step="4" hidden>
-        <div class="toolbar">
-          <h2>Save and connect</h2>
-          <span class="pill">Step 4</span>
-        </div>
-        <div class="callout">Saving creates a stable Clay URL. The configuration cannot be edited or deleted afterward, so use the test step until the output looks right.</div>
-        <div class="actions">
-          <button id="saveBtn" type="button">Save runner</button>
-        </div>
-        <div id="status" class="status"></div>
-        <div id="runUrl" class="url-box" hidden>
-          <strong>Clay URL</strong>
-          <code id="runUrlText"></code>
-          <div class="actions">
-            <button id="copyBtn" type="button">Copy URL</button>
-          </div>
-        </div>
-        <div class="step-actions">
-          <button type="button" data-next-step="3">Back</button>
-          <span class="help">Use this URL in Clay HTTP Sourcing.</span>
-        </div>
-      </section>
-    </div>
   </main>
-  <script>
-    const state = { id: null, locked: false, activeStep: 1 };
-    const $ = (id) => document.getElementById(id);
-    const configFieldIds = [
-      "name", "method", "targetUrl", "resultPath", "responseMode", "maxItems",
-      "paginationType", "maxPages", "pageSize", "pageParam", "pageSizeParam",
-      "startPage", "nextLinkPath", "totalPagesPath", "offsetParam", "limitParam",
-      "startOffset", "cursorParam", "nextCursorPath", "initialCursor",
-      "bodyTemplate", "passThroughHeaders"
-    ];
 
+  <script>
+    const BASE_PATH = ${JSON.stringify(basePath)};
+    const state = { id: null, locked: false };
+    const $ = (id) => document.getElementById(id);
+    const editableIds = ["name","method","targetUrl","resultPath","responseMode","maxItems","paginationType","maxPages","pageSize","pageParam","pageSizeParam","startPage","nextLinkPath","totalPagesPath","offsetParam","limitParam","startOffset","cursorParam","nextCursorPath","initialCursor","passThroughHeaders","bodyTemplate"];
     const defaults = {
-      name: "G2 Buyer Intent events",
+      name: "G2 Buyer Stream v2 API",
       targetUrl: "https://data.g2.com/api/v1/ahoy/remote-event-streams",
       method: "GET",
       resultPath: "data",
@@ -688,26 +582,14 @@ export function renderApp(): string {
       }
     };
 
-    function authHeaders() {
-      const token = $("adminToken").value.trim();
-      localStorage.setItem("paginationRunnerAdminToken", token);
-      return token ? { "x-admin-token": token } : {};
-    }
-
     async function api(path, options = {}) {
-      const response = await fetch(path, {
+      const response = await fetch(BASE_PATH + path, {
         ...options,
-        headers: {
-          "content-type": "application/json",
-          ...authHeaders(),
-          ...(options.headers || {})
-        }
+        headers: { "content-type": "application/json", ...(options.headers || {}) }
       });
       const text = await response.text();
       const body = text ? JSON.parse(text) : null;
-      if (!response.ok) {
-        throw new Error(body?.error || "Request failed");
-      }
+      if (!response.ok) throw new Error(body?.error || "Request failed");
       return body;
     }
 
@@ -716,15 +598,98 @@ export function renderApp(): string {
       $("status").className = "status " + (ok ? "ok" : "err");
     }
 
-    function setActiveStep(step) {
-      state.activeStep = Number(step);
-      document.querySelectorAll("[data-step-button]").forEach((button) => {
-        button.classList.toggle("active", Number(button.dataset.stepButton) === state.activeStep);
-      });
-      document.querySelectorAll("[data-flow-step]").forEach((section) => {
-        const isActive = Number(section.dataset.flowStep) === state.activeStep;
-        section.hidden = section.id === "analyticsPanel" ? !(state.id && isActive) : !isActive;
-      });
+    function updateUrlShape() {
+      $("urlShape").textContent = "Clay URL format: " + location.origin + BASE_PATH + "/<runner-id>";
+    }
+
+    function setPromptStatus(message) {
+      $("promptStatus").textContent = message;
+    }
+
+    function buildAiPrompt() {
+      const docsUrl = $("docsUrl").value.trim();
+      const goal = $("docsGoal").value.trim();
+      const excerpt = $("docsExcerpt").value.trim();
+      const current = readConfig();
+      return [
+        "You are helping configure Clay Pagination Runner, an open-source Cloudflare Worker that lets Clay call paginated APIs and receive one combined array.",
+        "",
+        "Read the project guide if you can browse:",
+        "https://github.com/chrisrcardone/clay-paginate/blob/main/AI_CONFIG_GUIDE.md",
+        "",
+        "Task:",
+        "Given the API documentation URL, any attached API documentation file, and any pasted excerpt below, return the exact values a non-technical user should enter into the Clay Pagination Runner form.",
+        "",
+        "API documentation URL:",
+        docsUrl || "(not provided)",
+        "",
+        "User goal:",
+        goal || "(not provided)",
+        "",
+        "Pasted docs excerpt or notes:",
+        excerpt || "(not provided; use the URL or attached file)",
+        "",
+        "Current form defaults for context:",
+        JSON.stringify(current, null, 2),
+        "",
+        "Important rules:",
+        "1. Do not invent API credentials. For header auth, return pass-through header names only, usually authorization, x-api-key, or api-key.",
+        "2. If an API key must be in the URL, use a URL placeholder like {{key}} in targetUrl and tell the user to call the generated Clay URL with ?key=their-key.",
+        "3. Never put credential values in staticHeaders.",
+        "4. Choose the safest pagination type from: jsonapi, page, offset, cursor, linkHeader, none.",
+        "5. Prefer small, safe test settings first: maxPages 3 to 10 and a documented pageSize. The user can increase after a successful test.",
+        "6. resultPath must point to the array of rows in the JSON response, such as data, results, items, records, or products.",
+        "7. If the API returns JSON:API links.next, use type jsonapi, nextLinkPath links.next, and totalPagesPath meta.page_count if available.",
+        "8. If docs are ambiguous, state the assumption and give the safest testable config.",
+        "",
+        "Return exactly this structure:",
+        "Summary: one sentence explaining the selected endpoint and pagination method.",
+        "",
+        "Form values:",
+        "- Name:",
+        "- Method:",
+        "- Target URL:",
+        "- Results path:",
+        "- Response:",
+        "- Max items:",
+        "- Pagination type:",
+        "- Max pages:",
+        "- Page size:",
+        "- Page param:",
+        "- Page size param:",
+        "- Start page:",
+        "- Next link path:",
+        "- Total pages path:",
+        "- Offset param:",
+        "- Limit param:",
+        "- Start offset:",
+        "- Cursor param:",
+        "- Next cursor path:",
+        "- Initial cursor:",
+        "- Pass-through headers:",
+        "- Static headers:",
+        "- Body template:",
+        "- Suggested test query params:",
+        "- Suggested test credential headers:",
+        "",
+        "JSON config:",
+        "Return a JSON object matching the form values, without credential values.",
+        "",
+        "Warnings:",
+        "List anything the user must verify in the docs before saving."
+      ].join("\\n");
+    }
+
+    function generatePrompt() {
+      $("aiPrompt").value = buildAiPrompt();
+      setPromptStatus("Prompt ready.");
+    }
+
+    async function readDocsFile(file) {
+      const text = await file.text();
+      const trimmed = text.slice(0, 40000);
+      $("docsExcerpt").value = trimmed;
+      setPromptStatus(file.name + " loaded" + (text.length > trimmed.length ? " (first 40k characters)" : "") + ".");
     }
 
     function print(value) {
@@ -739,7 +704,12 @@ export function renderApp(): string {
       row.querySelector(".header-value").value = pair.value || "";
       row.querySelector("button").addEventListener("click", () => row.remove());
       $(containerId).appendChild(row);
-      setEditorLocked(state.locked);
+      setLocked(state.locked);
+    }
+
+    function setHeaderRows(containerId, headers) {
+      $(containerId).innerHTML = "";
+      headers.forEach((header) => addHeaderRow(containerId, header));
     }
 
     function readHeaderRows(containerId) {
@@ -751,11 +721,6 @@ export function renderApp(): string {
         .filter((row) => row.name && row.value);
     }
 
-    function setHeaderRows(containerId, headers) {
-      $(containerId).innerHTML = "";
-      headers.forEach((header) => addHeaderRow(containerId, header));
-    }
-
     function numberOrUndefined(id) {
       const value = $(id).value.trim();
       return value === "" ? undefined : Number(value);
@@ -763,7 +728,7 @@ export function renderApp(): string {
 
     function readConfig() {
       return {
-        id: state.id || undefined,
+        id: state.locked ? state.id : undefined,
         name: $("name").value.trim(),
         targetUrl: $("targetUrl").value.trim(),
         method: $("method").value,
@@ -795,7 +760,6 @@ export function renderApp(): string {
     function applyConfig(config) {
       state.id = config.id || null;
       state.locked = Boolean(state.id);
-      $("currentId").textContent = state.id ? state.id : "Unsaved";
       $("name").value = config.name || "";
       $("targetUrl").value = config.targetUrl || "";
       $("method").value = config.method || "GET";
@@ -820,54 +784,66 @@ export function renderApp(): string {
       $("nextCursorPath").value = p.nextCursorPath || "meta.next_cursor";
       $("initialCursor").value = p.initialCursor || "";
       setHeaderRows("staticHeaders", config.staticHeaders || []);
-      $("runUrl").hidden = !state.id;
-      $("immutableNotice").hidden = !state.id;
-      setEditorLocked(state.locked);
-      setActiveStep(state.id ? 4 : state.activeStep);
-      if (!state.id) {
-        renderAnalytics(null);
-      }
+      updatePaginationFields();
+      setLocked(state.locked);
     }
 
-    function setEditorLocked(locked) {
-      configFieldIds.forEach((id) => {
-        const element = $(id);
-        if (element) element.disabled = locked;
+    function updatePaginationFields() {
+      const type = $("paginationType").value;
+      const active =
+        type === "jsonapi" || type === "page"
+          ? "page"
+          : type === "offset"
+            ? "offset"
+            : type === "cursor"
+              ? "cursor"
+              : type === "linkHeader"
+                ? "linkHeader"
+                : "none";
+      document.querySelectorAll("[data-pagination-group]").forEach((group) => {
+        group.hidden = group.dataset.paginationGroup !== active;
       });
-      Array.from($("staticHeaders").querySelectorAll("input, button")).forEach((element) => {
-        element.disabled = locked;
-      });
+    }
+
+    function setLocked(locked) {
+      editableIds.forEach((id) => { if ($(id)) $(id).disabled = locked; });
       $("addStaticHeader").disabled = locked;
       $("saveBtn").disabled = locked;
+      $("lockedNotice").hidden = !locked;
+      Array.from($("staticHeaders").querySelectorAll("input, button")).forEach((el) => { el.disabled = locked; });
+    }
+
+    function showRunUrl(url) {
+      $("runUrl").hidden = false;
+      $("runUrlText").textContent = url;
     }
 
     async function refreshList() {
       const body = await api("/api/configs");
       const list = $("savedList");
       list.innerHTML = "";
+      if (!body.configs.length) {
+        list.innerHTML = '<div class="hint">No runners yet. Create one on the left.</div>';
+        return;
+      }
       body.configs.forEach((config) => {
         const button = document.createElement("button");
         button.type = "button";
         button.className = "saved-item";
-        button.innerHTML = "<strong></strong><span class='volume'></span><small class='muted target'></small>";
+        button.innerHTML = '<strong></strong><span class="volume"></span><small></small>';
         button.querySelector("strong").textContent = config.name;
         button.querySelector(".volume").textContent = (config.clayCalls || 0) + " calls";
-        button.querySelector(".target").textContent = config.method + " " + config.targetUrl;
+        button.querySelector("small").textContent = config.method + " " + config.targetUrl;
         button.addEventListener("click", async () => {
           const detail = await api("/api/configs/" + config.id);
           applyConfig(detail.config);
           showRunUrl(detail.runUrl);
           print(detail.config);
-          await refreshAnalytics();
           setStatus("Loaded", true);
+          await refreshAnalytics();
         });
         list.appendChild(button);
       });
-    }
-
-    function showRunUrl(url) {
-      $("runUrl").hidden = false;
-      $("runUrlText").textContent = url;
     }
 
     async function runTest() {
@@ -882,26 +858,18 @@ export function renderApp(): string {
       });
       print(body);
       setStatus("Test returned " + body.itemCount + " items across " + body.pageCount + " page(s)", true);
-      await refreshAnalytics();
+      if (state.id) await refreshAnalytics();
     }
 
     async function saveRunner() {
-      if (state.locked) {
-        setStatus("Saved configurations are locked. Create a new runner for changes.", false);
-        return;
-      }
+      if (state.locked) return;
       setStatus("Saving...", true);
-      const body = await api("/api/configs", {
-        method: "POST",
-        body: JSON.stringify({ config: readConfig() })
-      });
+      const body = await api("/api/configs", { method: "POST", body: JSON.stringify({ config: readConfig() }) });
       state.id = body.config.id;
       state.locked = true;
-      $("currentId").textContent = state.id;
-      setEditorLocked(true);
-      $("immutableNotice").hidden = false;
       showRunUrl(body.runUrl);
       print(body);
+      setLocked(true);
       setStatus("Saved", true);
       await refreshList();
       await refreshAnalytics();
@@ -909,7 +877,7 @@ export function renderApp(): string {
 
     async function refreshAnalytics() {
       if (!state.id) {
-        renderAnalytics(null);
+        $("analyticsPanel").hidden = true;
         return;
       }
       const body = await api("/api/configs/" + state.id + "/analytics");
@@ -917,154 +885,78 @@ export function renderApp(): string {
     }
 
     function renderAnalytics(analytics) {
-      const empty = analytics || {
-        totalRuns: 0,
-        clayRuns: 0,
-        totalItems: 0,
-        avgDurationMs: 0,
-        statusCounts: [],
-        statusTimeline: [],
-        recentRuns: []
-      };
-      $("metricTotalRuns").textContent = empty.totalRuns || 0;
-      $("metricClayRuns").textContent = empty.clayRuns || 0;
-      $("metricItems").textContent = empty.totalItems || 0;
-      $("metricDuration").textContent = (empty.avgDurationMs || 0) + " ms";
-      renderStatusCounts(empty.statusCounts || []);
-      renderStatusChart(empty.statusTimeline || []);
-      const recent = $("recentRuns");
-      recent.innerHTML = "";
-      if (!empty.recentRuns || empty.recentRuns.length === 0) {
-        const row = document.createElement("div");
-        row.className = "help";
-        row.textContent = "No calls logged yet.";
-        recent.appendChild(row);
-        return;
-      }
-      empty.recentRuns.forEach((run) => {
-        const row = document.createElement("div");
-        row.className = "run-row";
-        row.innerHTML = "<strong></strong><span></span><span></span><span></span><span></span><span></span>";
-        row.children[0].textContent = run.mode;
-        row.children[1].textContent = run.status;
-        row.children[2].textContent = run.itemCount + " items";
-        row.children[3].textContent = run.pageCount + " pages";
-        row.children[4].textContent = run.durationMs + " ms";
-        row.children[5].textContent = run.error || new Date(run.createdAt).toLocaleString();
-        recent.appendChild(row);
-      });
-    }
-
-    function renderStatusCounts(counts) {
-      const target = $("statusCounts");
-      target.innerHTML = "";
-      if (counts.length === 0) {
-        return;
-      }
-      counts.forEach((entry) => {
+      $("analyticsPanel").hidden = false;
+      $("metricTotalRuns").textContent = analytics.totalRuns || 0;
+      $("metricClayRuns").textContent = analytics.clayRuns || 0;
+      $("metricItems").textContent = analytics.totalItems || 0;
+      $("metricDuration").textContent = (analytics.avgDurationMs || 0) + " ms";
+      $("statusCounts").innerHTML = "";
+      (analytics.statusCounts || []).forEach((entry) => {
         const pill = document.createElement("span");
         pill.className = "pill";
         pill.textContent = entry.statusCode + ": " + entry.count;
-        target.appendChild(pill);
+        $("statusCounts").appendChild(pill);
       });
+      renderChart(analytics.statusTimeline || []);
+      $("recentRuns").textContent = analytics.recentRuns?.length ? "Last call: " + analytics.recentRuns[0].status + " · " + analytics.recentRuns[0].itemCount + " items" : "No calls yet.";
     }
 
-    function renderStatusChart(points) {
-      const target = $("statusChart");
-      target.innerHTML = "";
+    function renderChart(points) {
+      const chart = $("statusChart");
+      chart.innerHTML = "";
       if (!points.length) {
-        const empty = document.createElement("div");
-        empty.className = "help";
-        empty.textContent = "No status-code timeline yet.";
-        target.appendChild(empty);
+        chart.innerHTML = '<span class="hint">No calls yet.</span>';
         return;
       }
-
-      const buckets = Array.from(new Set(points.map((point) => point.bucket)));
-      const statuses = Array.from(new Set(points.map((point) => point.statusCode))).sort();
-      const totals = new Map(buckets.map((bucket) => [bucket, points.filter((p) => p.bucket === bucket).reduce((sum, p) => sum + p.count, 0)]));
-      const maxTotal = Math.max(...Array.from(totals.values()), 1);
-      const width = Math.max(520, buckets.length * 54 + 72);
-      const height = 170;
-      const chartHeight = 108;
-      const barWidth = Math.max(18, Math.min(36, Math.floor((width - 72) / buckets.length) - 12));
-      const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-      svg.setAttribute("viewBox", "0 0 " + width + " " + height);
-
-      buckets.forEach((bucket, index) => {
-        const x = 48 + index * ((width - 72) / buckets.length);
-        let y = 124;
-        statuses.forEach((status) => {
-          const match = points.find((point) => point.bucket === bucket && point.statusCode === status);
-          const count = match ? match.count : 0;
-          if (!count) return;
-          const segmentHeight = Math.max(2, Math.round((count / maxTotal) * chartHeight));
-          y -= segmentHeight;
-          const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-          rect.setAttribute("x", String(x));
-          rect.setAttribute("y", String(y));
-          rect.setAttribute("width", String(barWidth));
-          rect.setAttribute("height", String(segmentHeight));
-          rect.setAttribute("fill", statusColor(status));
-          svg.appendChild(rect);
-        });
-
-        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        label.setAttribute("x", String(x + barWidth / 2));
-        label.setAttribute("y", "148");
-        label.setAttribute("text-anchor", "middle");
-        label.setAttribute("font-size", "10");
-        label.setAttribute("fill", "#667085");
-        label.textContent = bucket.slice(5);
-        svg.appendChild(label);
+      const max = Math.max(...points.map((point) => point.count), 1);
+      points.slice(-30).forEach((point) => {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.height = Math.max(4, Math.round((point.count / max) * 74)) + "px";
+        bar.title = point.bucket + " · " + point.statusCode + " · " + point.count;
+        if (String(point.statusCode).startsWith("4")) bar.style.background = "#f58c50";
+        if (String(point.statusCode).startsWith("5")) bar.style.background = "#dd2c53";
+        chart.appendChild(bar);
       });
-
-      const axis = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      axis.setAttribute("x1", "36");
-      axis.setAttribute("x2", String(width - 16));
-      axis.setAttribute("y1", "124");
-      axis.setAttribute("y2", "124");
-      axis.setAttribute("stroke", "#d9dee7");
-      svg.appendChild(axis);
-      target.appendChild(svg);
     }
 
-    function statusColor(status) {
-      if (status.startsWith("2")) return "#067647";
-      if (status.startsWith("3")) return "#175cd3";
-      if (status.startsWith("4")) return "#b54708";
-      if (status.startsWith("5")) return "#b42318";
-      return "#667085";
-    }
-
-    $("adminToken").value = localStorage.getItem("paginationRunnerAdminToken") || "";
-    $("addStaticHeader").addEventListener("click", () => addHeaderRow("staticHeaders"));
-    $("addCredentialHeader").addEventListener("click", () => addHeaderRow("credentialHeaders"));
-    $("refreshBtn").addEventListener("click", () => refreshList().catch((error) => setStatus(error.message, false)));
-    $("analyticsRefreshBtn").addEventListener("click", () => refreshAnalytics().catch((error) => setStatus(error.message, false)));
     $("newBtn").addEventListener("click", () => {
       applyConfig(defaults);
-      setHeaderRows("credentialHeaders", []);
+      state.id = null;
+      state.locked = false;
+      setLocked(false);
+      setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
+      $("runUrl").hidden = true;
+      $("analyticsPanel").hidden = true;
       print({});
-      setActiveStep(1);
       setStatus("", true);
     });
-    document.querySelectorAll("[data-step-button]").forEach((button) => {
-      button.addEventListener("click", () => setActiveStep(button.dataset.stepButton));
-    });
-    document.querySelectorAll("[data-next-step]").forEach((button) => {
-      button.addEventListener("click", () => setActiveStep(button.dataset.nextStep));
-    });
-    $("testBtn").addEventListener("click", () => runTest().catch((error) => setStatus(error.message, false)));
-    $("saveBtn").addEventListener("click", () => saveRunner().catch((error) => setStatus(error.message, false)));
+    $("refreshBtn").addEventListener("click", () => refreshList().catch((error) => setStatus(error.message, false)));
+    $("analyticsRefreshBtn").addEventListener("click", () => refreshAnalytics().catch((error) => setStatus(error.message, false)));
+    $("addStaticHeader").addEventListener("click", () => addHeaderRow("staticHeaders"));
+    $("addCredentialHeader").addEventListener("click", () => addHeaderRow("credentialHeaders"));
+    $("paginationType").addEventListener("change", updatePaginationFields);
+    $("testBtn").addEventListener("click", () => runTest().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
+    $("saveBtn").addEventListener("click", () => saveRunner().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
     $("copyBtn").addEventListener("click", async () => {
       await navigator.clipboard.writeText($("runUrlText").textContent);
       setStatus("Copied", true);
     });
 
+    $("generatePromptBtn").addEventListener("click", generatePrompt);
+    $("copyPromptBtn").addEventListener("click", async () => {
+      if (!$("aiPrompt").value.trim()) generatePrompt();
+      await navigator.clipboard.writeText($("aiPrompt").value);
+      setPromptStatus("Copied.");
+    });
+    $("docsFile").addEventListener("change", (event) => {
+      const file = event.target.files?.[0];
+      if (file) readDocsFile(file).catch((error) => setPromptStatus(error.message));
+    });
+
     applyConfig(defaults);
-    setActiveStep(1);
     setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
+    updateUrlShape();
     refreshList().catch((error) => setStatus(error.message, false));
   </script>
 </body>

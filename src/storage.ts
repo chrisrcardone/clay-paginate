@@ -31,7 +31,7 @@ export interface ConfigSummary {
   updatedAt: string;
 }
 
-export async function listConfigs(db: D1Database, origin: string): Promise<ConfigSummary[]> {
+export async function listConfigs(db: D1Database, publicBaseUrl: string): Promise<ConfigSummary[]> {
   const result = await db
     .prepare(
       `SELECT
@@ -57,7 +57,7 @@ export async function listConfigs(db: D1Database, origin: string): Promise<Confi
     name: row.name,
     targetUrl: row.target_url,
     method: row.target_method,
-    runUrl: `${origin}/paginate/${row.id}`,
+    runUrl: `${publicBaseUrl}/${row.id}`,
     totalCalls: Number(row.total_calls ?? 0),
     clayCalls: Number(row.clay_calls ?? 0),
     lastRunAt: row.last_run_at ?? null,
@@ -104,12 +104,6 @@ export async function saveConfig(db: D1Database, config: RunnerConfig): Promise<
   }
 
   return stored;
-}
-
-export async function deleteConfig(db: D1Database, id: string): Promise<boolean> {
-  void db;
-  void id;
-  throw new ImmutableConfigError();
 }
 
 export async function logRun(

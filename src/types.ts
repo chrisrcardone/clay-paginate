@@ -1,6 +1,5 @@
 export interface Env {
   DB: D1Database;
-  ADMIN_TOKEN?: string;
 }
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH";

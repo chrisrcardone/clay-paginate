@@ -22,8 +22,8 @@ The D1 database does not store:
 
 API credentials should be provided as temporary test headers in the UI or configured in Clay's HTTP API header authentication. Saved static headers reject common credential header names.
 
-If an API requires a URL credential, use a `{{placeholder}}` in the saved target URL and pass the value as a query parameter on the generated `/paginate/:id` URL. Placeholder values are substituted in memory only and are removed from normal query passthrough.
+If an API requires a URL credential, use a `{{placeholder}}` in the saved target URL and pass the value as a query parameter on the generated `https://paginate.chris-apis.xyz/<config-id>` URL. Placeholder values are substituted in memory only and are removed from normal query passthrough.
 
-## Admin access
+## Deployment access
 
-Set `ADMIN_TOKEN` as a Cloudflare Worker secret. The UI and configuration APIs require `x-admin-token` when this secret is present. The Clay-facing `/paginate/:id` endpoint does not require `ADMIN_TOKEN`, because Clay authenticates to the upstream API through pass-through headers or URL placeholders.
+The app is designed for a trusted deployment path. If the configuration UI should not be publicly writable, put `https://paginate.chris-apis.xyz` behind Cloudflare Access or another edge access rule. The Clay-facing generated URLs under `https://paginate.chris-apis.xyz/<config-id>` must remain reachable by Clay, because Clay authenticates to the upstream API through pass-through headers or URL placeholders.

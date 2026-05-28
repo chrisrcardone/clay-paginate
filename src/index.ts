@@ -16,57 +16,56 @@ const JSON_HEADERS = {
   "cache-control": "no-store",
 };
 
+const LEGACY_BASE_PATH = "/paginate";
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    const route = getRoute(url);
 
     if (request.method === "OPTIONS") {
       return withCors(new Response(null, { status: 204 }));
     }
 
     try {
-      if (url.pathname === "/" && request.method === "GET") {
-        return html(renderApp());
+      if (route.appPath === "/" && isReadMethod(request.method)) {
+        return request.method === "HEAD" ? htmlHead() : html(renderApp(route.basePath));
       }
 
-      if (url.pathname === "/health" && request.method === "GET") {
+      if (route.appPath === "/health" && isReadMethod(request.method)) {
         return json({ ok: true });
       }
 
-      if (url.pathname === "/api/test" && request.method === "POST") {
-        requireAdmin(request, env);
+      if (route.appPath === "/api/test" && request.method === "POST") {
         return await handleTest(request, env);
       }
 
-      if (url.pathname === "/api/configs" && request.method === "GET") {
-        requireAdmin(request, env);
-        const configs = await listConfigs(env.DB, url.origin);
+      if (route.appPath === "/api/configs" && request.method === "GET") {
+        const configs = await listConfigs(env.DB, route.publicBaseUrl(url.origin));
         return json({ configs });
       }
 
-      if (url.pathname === "/api/configs" && request.method === "POST") {
-        requireAdmin(request, env);
-        return await handleSave(request, env, url.origin);
+      if (route.appPath === "/api/configs" && request.method === "POST") {
+        return await handleSave(request, env, route.publicBaseUrl(url.origin));
       }
 
-      const configMatch = url.pathname.match(/^\/api\/configs\/([^/]+)$/);
+      const configMatch = route.appPath.match(/^\/api\/configs\/([^/]+)$/);
       if (configMatch && request.method === "GET") {
-        requireAdmin(request, env);
-        return await handleGet(env, configMatch[1], url.origin);
+        return await handleGet(env, configMatch[1], route.publicBaseUrl(url.origin));
       }
 
       if (configMatch && request.method === "DELETE") {
-        requireAdmin(request, env);
         return json({ error: "Saved configurations are immutable and cannot be deleted" }, 405);
       }
 
-      const analyticsMatch = url.pathname.match(/^\/api\/configs\/([^/]+)\/analytics$/);
+      const analyticsMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/analytics$/);
       if (analyticsMatch && request.method === "GET") {
-        requireAdmin(request, env);
         return await handleAnalytics(env, analyticsMatch[1]);
       }
 
-      const runMatch = url.pathname.match(/^\/(?:run|paginate)\/([^/]+)$/);
+      const legacyRunMatch = route.appPath.match(/^\/run\/([^/]+)$/);
+      const baseRunMatch = route.appPath.match(/^\/([^/]+)$/);
+      const runMatch = legacyRunMatch ?? baseRunMatch;
       if (runMatch && (request.method === "GET" || request.method === "POST")) {
         return await handleRun(request, env, runMatch[1]);
       }
@@ -77,6 +76,44 @@ export default {
     }
   },
 };
+
+function getRoute(url: URL): {
+  appPath: string;
+  basePath: string;
+  publicBaseUrl: (origin: string) => string;
+} {
+  const { pathname } = url;
+
+  // Primary deployment is the subdomain root:
+  //   https://paginate.chris-apis.xyz
+  // Keep /paginate as a compatibility prefix so older links and workers.dev
+  // smoke checks still work while the public surface moves to the subdomain.
+  if (pathname === LEGACY_BASE_PATH || pathname === `${LEGACY_BASE_PATH}/`) {
+    return {
+      appPath: "/",
+      basePath: LEGACY_BASE_PATH,
+      publicBaseUrl: (origin) => `${origin}${LEGACY_BASE_PATH}`,
+    };
+  }
+
+  if (pathname.startsWith(`${LEGACY_BASE_PATH}/`)) {
+    return {
+      appPath: pathname.slice(LEGACY_BASE_PATH.length),
+      basePath: LEGACY_BASE_PATH,
+      publicBaseUrl: (origin) => `${origin}${LEGACY_BASE_PATH}`,
+    };
+  }
+
+  return {
+    appPath: pathname,
+    basePath: "",
+    publicBaseUrl: (origin) => origin,
+  };
+}
+
+function isReadMethod(method: string): boolean {
+  return method === "GET" || method === "HEAD";
+}
 
 async function handleTest(request: Request, env: Env): Promise<Response> {
   const body = await request.json<TestRequest>();
@@ -121,17 +158,17 @@ async function handleAnalytics(env: Env, id: string): Promise<Response> {
   return json({ analytics: await getAnalytics(env.DB, id) });
 }
 
-async function handleSave(request: Request, env: Env, origin: string): Promise<Response> {
+async function handleSave(request: Request, env: Env, publicBaseUrl: string): Promise<Response> {
   const body = await request.json<{ config: RunnerConfig }>();
   validateConfigInput(body.config);
   const config = await saveConfig(env.DB, body.config);
   return json({
     config,
-    runUrl: `${origin}/paginate/${config.id}`,
+    runUrl: `${publicBaseUrl}/${config.id}`,
   });
 }
 
-async function handleGet(env: Env, id: string, origin: string): Promise<Response> {
+async function handleGet(env: Env, id: string, publicBaseUrl: string): Promise<Response> {
   const config = await getConfig(env.DB, id);
   if (!config) {
     return json({ error: "Config not found" }, 404);
@@ -139,7 +176,7 @@ async function handleGet(env: Env, id: string, origin: string): Promise<Response
 
   return json({
     config,
-    runUrl: `${origin}/paginate/${config.id}`,
+    runUrl: `${publicBaseUrl}/${config.id}`,
   });
 }
 
@@ -212,17 +249,6 @@ function validateConfigInput(config: RunnerConfig | undefined): asserts config i
   }
 }
 
-function requireAdmin(request: Request, env: Env): void {
-  if (!env.ADMIN_TOKEN) {
-    return;
-  }
-
-  const provided = request.headers.get("x-admin-token");
-  if (provided !== env.ADMIN_TOKEN) {
-    throw new HttpError(401, "Unauthorized");
-  }
-}
-
 function headersFromPairs(pairs: HeaderPair[]): Headers {
   const headers = new Headers();
   for (const pair of pairs) {
@@ -235,6 +261,15 @@ function headersFromPairs(pairs: HeaderPair[]): Headers {
 
 function html(markup: string): Response {
   return new Response(markup, {
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+    },
+  });
+}
+
+function htmlHead(): Response {
+  return new Response(null, {
     headers: {
       "content-type": "text/html; charset=utf-8",
       "cache-control": "no-store",
@@ -255,7 +290,7 @@ function withCors(response: Response): Response {
   const headers = new Headers(response.headers);
   headers.set("access-control-allow-origin", "*");
   headers.set("access-control-allow-methods", "GET,POST,DELETE,OPTIONS");
-  headers.set("access-control-allow-headers", "content-type,x-admin-token,authorization,x-api-key,api-key");
+  headers.set("access-control-allow-headers", "content-type,authorization,x-api-key,api-key");
   return new Response(response.body, { status: response.status, headers });
 }
 

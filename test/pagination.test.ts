@@ -114,4 +114,25 @@ describe("pagination runner", () => {
     expect(url.searchParams.get("filter")).toBe("value");
     expect(result.pages[0].url).toContain("api=redacted");
   });
+
+  it("retries transient GET upstream failures", async () => {
+    let calls = 0;
+    const fetcher = async (): Promise<Response> => {
+      calls += 1;
+      if (calls === 1) {
+        return new Response("try again", { status: 503 });
+      }
+
+      return Response.json({
+        data: [{ id: "1" }],
+        links: {},
+        meta: { page_count: 1 },
+      });
+    };
+
+    const result = await runPagination({ ...baseConfig, pagination: { ...baseConfig.pagination, maxPages: 1 } }, { fetcher });
+
+    expect(calls).toBe(2);
+    expect(result.items).toEqual([{ id: "1" }]);
+  });
 });

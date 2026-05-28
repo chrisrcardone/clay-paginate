@@ -5,6 +5,12 @@
   "compatibility_date": "2026-05-28",
   "workers_dev": true,
   "preview_urls": true,
+  "routes": [
+    {
+      "pattern": "paginate.chris-apis.xyz",
+      "custom_domain": true
+    }
+  ],
   "observability": {
     "enabled": true
   },

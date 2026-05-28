@@ -1,10 +1,23 @@
 # Clay Pagination Runner
 
-Cloudflare Worker that lets Clay call APIs without native pagination support. Configure a runner in the web UI, test it with temporary credentials, save the pagination behavior in D1, then use the generated `/paginate/:id` URL in Clay.
+Cloudflare Worker that lets Clay call APIs without native pagination support. Configure a runner in the web UI, test it with temporary credentials, save the pagination behavior in D1, then use the generated `/<config-id>` URL in Clay.
 
 The project is intentionally small and open source so the request flow is easy to audit.
 
-Live Worker: `https://clay-pagination-runner.boston-ma.workers.dev`
+Production app: `https://paginate.chris-apis.xyz`
+
+GitHub repo: `https://github.com/chrisrcardone/clay-paginate`
+
+## AI-assisted setup
+
+The app includes an AI setup helper at the top of the form. Paste an API docs URL, upload or paste docs text, and copy the generated prompt into Claude, ChatGPT, or another AI. The prompt asks the AI to return exact field values for the runner.
+
+AI assistants can also use these repo files directly:
+
+- `AI_CONFIG_GUIDE.md`: field meanings, pagination selection rules, and the expected output format.
+- `SKILL.md`: compact skill instructions for configuring runners.
+- `CLAUDE.md`: Claude-specific project guidance.
+- `AGENTS.md`: implementation and safety invariants for coding agents.
 
 ## What gets stored
 
@@ -31,7 +44,7 @@ https://api-end-point.com/call?api={{key}}
 Then call the generated Clay URL with the matching query parameter:
 
 ```text
-https://your-worker.example.com/paginate/<config-id>?key=api-key-goes-here
+https://paginate.chris-apis.xyz/<config-id>?key=api-key-goes-here
 ```
 
 The Worker substitutes `key` into the upstream URL in memory and removes it from normal query forwarding. Placeholder values are never stored in D1 analytics.
@@ -72,11 +85,10 @@ Copy the returned `database_id` into `wrangler.jsonc`, then run:
 
 ```sh
 npm run db:migrate:remote
-npx wrangler secret put ADMIN_TOKEN
 npm run deploy
 ```
 
-`ADMIN_TOKEN` protects the UI and config APIs. The `/paginate/:id` endpoint is intentionally available to Clay without the admin token.
+The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. Generated Clay URLs use `https://paginate.chris-apis.xyz/<config-id>`.
 
 ## Privacy model
 
@@ -87,6 +99,14 @@ npm run deploy
 - Only configured pass-through header names are forwarded upstream.
 - Runtime analytics never store call payloads or returned data.
 
+## Reliability model
+
+- Saved runner URLs are immutable and stable.
+- The runner caps pagination with `maxPages` and optional `maxItems`.
+- GET page fetches retry short transient failures such as 429 and 5xx.
+- Upstream errors return full body content to Clay for debugging, but are not stored.
+- Remote smoke tests should be cleaned from D1 after verification.
+
 ## Clay usage
 
-Use the generated `/paginate/:id` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs.
+Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs.
