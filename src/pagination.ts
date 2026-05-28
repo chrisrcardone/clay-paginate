@@ -16,6 +16,13 @@ export class UpstreamError extends Error {
   }
 }
 
+export class MissingPlaceholderError extends Error {
+  constructor(readonly names: string[]) {
+    super(`Missing required URL parameter${names.length === 1 ? "" : "s"}: ${names.join(", ")}`);
+    this.name = "MissingPlaceholderError";
+  }
+}
+
 export interface RunOptions {
   incomingHeaders?: Headers;
   incomingQuery?: URLSearchParams;
@@ -36,6 +43,8 @@ export async function runPagination(config: RunnerConfig, options: RunOptions = 
   const started = Date.now();
   const fetcher = options.fetcher ?? fetch;
   const normalized = normalizeConfig(config, options.testMode);
+  const placeholderContext = resolveUrlPlaceholders(normalized.targetUrl, options.incomingQuery);
+  const passthroughQuery = removeConsumedQueryParams(options.incomingQuery, placeholderContext.consumedParams);
   const state: PageState = {
     pageNumber: normalized.pagination.startPage ?? 1,
     offset: normalized.pagination.startOffset ?? 0,
@@ -48,14 +57,14 @@ export async function runPagination(config: RunnerConfig, options: RunOptions = 
   let truncated = false;
 
   for (let index = 0; index < normalized.pagination.maxPages; index += 1) {
-    const requestUrl = buildPageUrl(normalized, state, options.incomingQuery);
+    const requestUrl = buildPageUrl(normalized, state, passthroughQuery, placeholderContext.targetUrl);
     const init = buildFetchInit(normalized, options);
     const response = await fetchWithTimeout(fetcher, requestUrl.toString(), init, DEFAULT_TIMEOUT_MS);
     upstreamStatus = response.status;
 
     const rawBody = await response.text();
     if (!response.ok) {
-      throw new UpstreamError(`Upstream returned ${response.status}`, response.status, rawBody.slice(0, 2000));
+      throw new UpstreamError(`Upstream returned ${response.status}`, response.status, rawBody);
     }
 
     const json = parseJson(rawBody);
@@ -136,7 +145,14 @@ export function normalizeConfig(config: RunnerConfig, testMode = false): RunnerC
 }
 
 export function normalizeTargetUrl(value: string): string {
-  const url = new URL(value.trim());
+  const placeholders = new Map<string, string>();
+  const masked = value.trim().replace(/{{\s*([A-Za-z0-9_.-]+)\s*}}/g, (_, name: string) => {
+    const marker = `__PLACEHOLDER_${placeholders.size}__`;
+    placeholders.set(marker, name);
+    return marker;
+  });
+
+  const url = new URL(masked);
   url.hash = "";
   url.hostname = url.hostname.toLowerCase();
 
@@ -145,15 +161,21 @@ export function normalizeTargetUrl(value: string): string {
   }
 
   url.searchParams.sort();
-  return url.toString();
+  let normalized = url.toString();
+  for (const [marker, name] of placeholders.entries()) {
+    normalized = normalized.replaceAll(marker, `{{${name}}}`);
+  }
+
+  return normalized;
 }
 
 export function buildPageUrl(
   config: RunnerConfig,
   state: PageState,
   incomingQuery?: URLSearchParams,
+  resolvedTargetUrl = config.targetUrl,
 ): URL {
-  const url = state.nextUrl ? new URL(state.nextUrl, config.targetUrl) : new URL(config.targetUrl);
+  const url = state.nextUrl ? new URL(state.nextUrl, resolvedTargetUrl) : new URL(resolvedTargetUrl);
 
   if (!state.nextUrl && incomingQuery) {
     for (const [key, value] of incomingQuery.entries()) {
@@ -298,7 +320,7 @@ function parseJson(rawBody: string): unknown {
   try {
     return JSON.parse(rawBody);
   } catch {
-    throw new UpstreamError("Upstream returned non-JSON data", 502, rawBody.slice(0, 2000));
+    throw new UpstreamError("Upstream returned non-JSON data", 502, rawBody);
   }
 }
 
@@ -361,9 +383,54 @@ function clampNumber(value: number | undefined, fallback: number, min: number, m
 function sanitizeUrlForDebug(url: URL): string {
   const clone = new URL(url);
   for (const key of clone.searchParams.keys()) {
-    if (/token|key|secret|password/i.test(key)) {
+    if (/api|auth|credential|token|key|secret|password/i.test(key)) {
       clone.searchParams.set(key, "redacted");
     }
   }
   return clone.toString();
+}
+
+interface PlaceholderContext {
+  targetUrl: string;
+  consumedParams: Set<string>;
+}
+
+function resolveUrlPlaceholders(template: string, params?: URLSearchParams): PlaceholderContext {
+  const consumedParams = new Set<string>();
+  const missing = new Set<string>();
+
+  // Placeholder values come from the Clay call URL. They are substituted into
+  // the upstream URL in memory only; neither the raw value nor the final URL is
+  // persisted to D1 analytics.
+  const targetUrl = template.replace(/{{\s*([A-Za-z0-9_.-]+)\s*}}/g, (_, name: string) => {
+    const value = params?.get(name);
+    if (value === null || value === undefined) {
+      missing.add(name);
+      return "";
+    }
+
+    consumedParams.add(name);
+    return encodeURIComponent(value);
+  });
+
+  if (missing.size > 0) {
+    throw new MissingPlaceholderError(Array.from(missing));
+  }
+
+  return { targetUrl, consumedParams };
+}
+
+function removeConsumedQueryParams(params: URLSearchParams | undefined, consumed: Set<string>): URLSearchParams | undefined {
+  if (!params) {
+    return undefined;
+  }
+
+  const filtered = new URLSearchParams();
+  for (const [key, value] of params.entries()) {
+    if (!consumed.has(key)) {
+      filtered.append(key, value);
+    }
+  }
+
+  return filtered;
 }

@@ -1,8 +1,8 @@
-import { runPagination, UpstreamError } from "./pagination";
+import { MissingPlaceholderError, runPagination, UpstreamError } from "./pagination";
 import { renderApp } from "./ui";
 import {
-  deleteConfig,
   DuplicateConfigError,
+  ImmutableConfigError,
   getAnalytics,
   getConfig,
   listConfigs,
@@ -57,8 +57,7 @@ export default {
 
       if (configMatch && request.method === "DELETE") {
         requireAdmin(request, env);
-        const deleted = await deleteConfig(env.DB, configMatch[1]);
-        return json({ deleted });
+        return json({ error: "Saved configurations are immutable and cannot be deleted" }, 405);
       }
 
       const analyticsMatch = url.pathname.match(/^\/api\/configs\/([^/]+)\/analytics$/);
@@ -67,7 +66,7 @@ export default {
         return await handleAnalytics(env, analyticsMatch[1]);
       }
 
-      const runMatch = url.pathname.match(/^\/run\/([^/]+)$/);
+      const runMatch = url.pathname.match(/^\/(?:run|paginate)\/([^/]+)$/);
       if (runMatch && (request.method === "GET" || request.method === "POST")) {
         return await handleRun(request, env, runMatch[1]);
       }
@@ -128,7 +127,7 @@ async function handleSave(request: Request, env: Env, origin: string): Promise<R
   const config = await saveConfig(env.DB, body.config);
   return json({
     config,
-    runUrl: `${origin}/run/${config.id}`,
+    runUrl: `${origin}/paginate/${config.id}`,
   });
 }
 
@@ -140,7 +139,7 @@ async function handleGet(env: Env, id: string, origin: string): Promise<Response
 
   return json({
     config,
-    runUrl: `${origin}/run/${config.id}`,
+    runUrl: `${origin}/paginate/${config.id}`,
   });
 }
 
@@ -188,6 +187,7 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
       configId: id,
       mode: "run",
       status: "error",
+      upstreamStatus: error instanceof UpstreamError ? error.status : undefined,
       error: getAnalyticsErrorCode(error),
     });
     throw error;
@@ -264,6 +264,17 @@ function handleError(error: unknown): Response {
     return json({ error: error.message }, error.status);
   }
 
+  if (error instanceof MissingPlaceholderError) {
+    return json(
+      {
+        error: error.message,
+        code: "missing_url_placeholder",
+        missing: error.names,
+      },
+      400,
+    );
+  }
+
   if (error instanceof UpstreamError) {
     return json(
       {
@@ -285,6 +296,10 @@ function handleError(error: unknown): Response {
       },
       409,
     );
+  }
+
+  if (error instanceof ImmutableConfigError) {
+    return json({ error: error.message, code: "immutable_config" }, 409);
   }
 
   const message = error instanceof Error ? error.message : "Unknown error";

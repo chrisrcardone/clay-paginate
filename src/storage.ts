@@ -11,19 +11,45 @@ export class DuplicateConfigError extends Error {
   }
 }
 
+export class ImmutableConfigError extends Error {
+  constructor() {
+    super("Saved configurations are immutable. Create a new runner instead.");
+    this.name = "ImmutableConfigError";
+  }
+}
+
 export interface ConfigSummary {
   id: string;
   name: string;
   targetUrl: string;
   method: string;
   runUrl: string;
+  totalCalls: number;
+  clayCalls: number;
+  lastRunAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
 export async function listConfigs(db: D1Database, origin: string): Promise<ConfigSummary[]> {
   const result = await db
-    .prepare("SELECT id, name, target_url, target_method, created_at, updated_at FROM configs ORDER BY updated_at DESC LIMIT 100")
+    .prepare(
+      `SELECT
+         c.id,
+         c.name,
+         c.target_url,
+         c.target_method,
+         c.created_at,
+         c.updated_at,
+         COUNT(r.id) AS total_calls,
+         SUM(CASE WHEN r.mode = 'run' THEN 1 ELSE 0 END) AS clay_calls,
+         MAX(r.created_at) AS last_run_at
+       FROM configs c
+       LEFT JOIN run_logs r ON r.config_id = c.id
+       GROUP BY c.id
+       ORDER BY clay_calls DESC, total_calls DESC, c.created_at DESC
+       LIMIT 100`,
+    )
     .all<Omit<SavedConfigRow, "config_json">>();
 
   return (result.results ?? []).map((row) => ({
@@ -31,7 +57,10 @@ export async function listConfigs(db: D1Database, origin: string): Promise<Confi
     name: row.name,
     targetUrl: row.target_url,
     method: row.target_method,
-    runUrl: `${origin}/run/${row.id}`,
+    runUrl: `${origin}/paginate/${row.id}`,
+    totalCalls: Number(row.total_calls ?? 0),
+    clayCalls: Number(row.clay_calls ?? 0),
+    lastRunAt: row.last_run_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   }));
@@ -50,8 +79,12 @@ export async function getConfig(db: D1Database, id: string): Promise<RunnerConfi
 }
 
 export async function saveConfig(db: D1Database, config: RunnerConfig): Promise<RunnerConfig> {
+  if (config.id) {
+    throw new ImmutableConfigError();
+  }
+
   const normalized = normalizeConfig(config);
-  const id = config.id || crypto.randomUUID();
+  const id = crypto.randomUUID();
   const now = new Date().toISOString();
   const stored = { ...normalized, id };
 
@@ -59,13 +92,7 @@ export async function saveConfig(db: D1Database, config: RunnerConfig): Promise<
     await db
       .prepare(
         `INSERT INTO configs (id, name, target_url, target_method, config_json, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(id) DO UPDATE SET
-           name = excluded.name,
-           target_url = excluded.target_url,
-           target_method = excluded.target_method,
-           config_json = excluded.config_json,
-           updated_at = excluded.updated_at`,
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
       .bind(id, stored.name, stored.targetUrl, stored.method, JSON.stringify(stored), now, now)
       .run();
@@ -80,8 +107,9 @@ export async function saveConfig(db: D1Database, config: RunnerConfig): Promise<
 }
 
 export async function deleteConfig(db: D1Database, id: string): Promise<boolean> {
-  const result = await db.prepare("DELETE FROM configs WHERE id = ?").bind(id).run();
-  return result.meta.changes > 0;
+  void db;
+  void id;
+  throw new ImmutableConfigError();
 }
 
 export async function logRun(
@@ -137,6 +165,41 @@ export async function getAnalytics(db: D1Database, configId: string): Promise<Ru
     .bind(configId)
     .first<Record<string, number | string | null>>();
 
+  const statusCounts = await db
+    .prepare(
+      `SELECT
+         CASE
+           WHEN upstream_status IS NOT NULL THEN CAST(upstream_status AS TEXT)
+           WHEN status = 'ok' THEN 'unknown'
+           ELSE 'worker_error'
+         END AS status_code,
+         COUNT(*) AS count
+       FROM run_logs
+       WHERE config_id = ?
+       GROUP BY status_code
+       ORDER BY count DESC, status_code ASC`,
+    )
+    .bind(configId)
+    .all<{ status_code: string; count: number }>();
+
+  const statusTimeline = await db
+    .prepare(
+      `SELECT
+         date(created_at) AS bucket,
+         CASE
+           WHEN upstream_status IS NOT NULL THEN CAST(upstream_status AS TEXT)
+           WHEN status = 'ok' THEN 'unknown'
+           ELSE 'worker_error'
+         END AS status_code,
+         COUNT(*) AS count
+       FROM run_logs
+       WHERE config_id = ? AND created_at >= datetime('now', '-30 days')
+       GROUP BY bucket, status_code
+       ORDER BY bucket ASC, status_code ASC`,
+    )
+    .bind(configId)
+    .all<{ bucket: string; status_code: string; count: number }>();
+
   const recent = await db
     .prepare(
       `SELECT mode, status, page_count, item_count, duration_ms, upstream_status, error, created_at
@@ -167,6 +230,15 @@ export async function getAnalytics(db: D1Database, configId: string): Promise<Ru
     totalItems: Number(aggregate?.totalItems ?? 0),
     avgDurationMs: Number(aggregate?.avgDurationMs ?? 0),
     lastRunAt: typeof aggregate?.lastRunAt === "string" ? aggregate.lastRunAt : null,
+    statusCounts: (statusCounts.results ?? []).map((row) => ({
+      statusCode: row.status_code,
+      count: row.count,
+    })),
+    statusTimeline: (statusTimeline.results ?? []).map((row) => ({
+      bucket: row.bucket,
+      statusCode: row.status_code,
+      count: row.count,
+    })),
     recentRuns: (recent.results ?? []).map(toRunLogSummary),
   };
 }

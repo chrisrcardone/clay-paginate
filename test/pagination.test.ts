@@ -84,4 +84,34 @@ describe("pagination runner", () => {
     expect(calls[0]).toContain("page%5Bnumber%5D=1");
     expect(calls[1]).toContain("page%5Bnumber%5D=2");
   });
+
+  it("fills URL placeholders from Clay query params without forwarding consumed secrets", async () => {
+    let requestedUrl = "";
+    const fetcher = async (input: RequestInfo | URL): Promise<Response> => {
+      requestedUrl = input.toString();
+      return Response.json({
+        data: [{ id: "1" }],
+        links: {},
+        meta: { page_count: 1 },
+      });
+    };
+
+    const result = await runPagination(
+      {
+        ...baseConfig,
+        targetUrl: "https://api.example.com/call?api={{key}}",
+        pagination: { ...baseConfig.pagination, maxPages: 1 },
+      },
+      {
+        fetcher,
+        incomingQuery: new URLSearchParams("key=secret-api-key&filter=value"),
+      },
+    );
+
+    const url = new URL(requestedUrl);
+    expect(url.searchParams.get("api")).toBe("secret-api-key");
+    expect(url.searchParams.get("key")).toBeNull();
+    expect(url.searchParams.get("filter")).toBe("value");
+    expect(result.pages[0].url).toContain("api=redacted");
+  });
 });

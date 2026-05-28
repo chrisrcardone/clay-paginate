@@ -59,7 +59,20 @@ export interface RunAnalytics {
   totalItems: number;
   avgDurationMs: number;
   lastRunAt: string | null;
+  statusCounts: StatusCount[];
+  statusTimeline: StatusTimelinePoint[];
   recentRuns: RunLogSummary[];
+}
+
+export interface StatusCount {
+  statusCode: string;
+  count: number;
+}
+
+export interface StatusTimelinePoint {
+  bucket: string;
+  statusCode: string;
+  count: number;
 }
 
 export interface RunLogSummary {
@@ -97,6 +110,9 @@ export interface SavedConfigRow {
   config_json: string;
   created_at: string;
   updated_at: string;
+  total_calls?: number;
+  clay_calls?: number;
+  last_run_at?: string | null;
 }
 
 export interface TestRequest {
