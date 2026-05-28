@@ -4,6 +4,8 @@ Cloudflare Worker that lets Clay call APIs without native pagination support. Co
 
 The project is intentionally small and open source so the request flow is easy to audit.
 
+Live Worker: `https://clay-pagination-runner.boston-ma.workers.dev`
+
 ## What gets stored
 
 The Worker stores target URL, method, headers that are safe to persist, pass-through header names, result path, and pagination behavior. Test credentials are not stored. Clay should send the upstream API credential header on each request, and the Worker forwards only the configured pass-through headers.

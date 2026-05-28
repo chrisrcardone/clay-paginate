@@ -3,6 +3,8 @@
   "name": "clay-pagination-runner",
   "main": "src/index.ts",
   "compatibility_date": "2026-05-28",
+  "workers_dev": true,
+  "preview_urls": true,
   "observability": {
     "enabled": true
   },
