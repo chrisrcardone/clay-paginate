@@ -1,0 +1,21 @@
+{
+  "name": "clay-pagination-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cf-typegen": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply clay-pagination-runner-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply clay-pagination-runner-db --remote"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260510.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4",
+    "wrangler": "^4.15.2"
+  }
+}
