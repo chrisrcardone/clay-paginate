@@ -10,7 +10,9 @@ GitHub repo: `https://github.com/chrisrcardone/clay-paginate`
 
 ## AI-assisted setup
 
-The app includes an AI setup helper at the top of the form. Paste an API docs URL, upload or paste docs text, and copy the generated prompt into Claude, ChatGPT, or another AI. The prompt asks the AI to return exact field values for the runner.
+The app includes an AI setup helper at the top of the form. Paste an API docs URL, upload or paste docs text, and copy the generated prompt into Claude, ChatGPT, or another AI. The prompt asks the AI to return one strict JSON object with runner values, field explanations, certainty, and warnings. Paste that object back into the app to fill the form.
+
+When an AI object is applied, the app fills only the values the AI returned. Any untouched starter defaults that the AI did not return are cleared so users can see what still needs a confirmed value before testing or saving.
 
 AI assistants can also use these repo files directly:
 

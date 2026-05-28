@@ -9,7 +9,7 @@ Use this skill when a user asks an AI assistant to configure Clay Pagination Run
 3. Determine auth placement: header auth, URL key placeholder, static non-secret headers, or body.
 4. Determine the result array path.
 5. Determine pagination type and the exact params/paths.
-6. Return field-by-field values for the app.
+6. Return one strict JSON object the app can parse.
 7. Tell the user to test before saving.
 
 ## App URL
@@ -26,9 +26,15 @@ https://paginate.chris-apis.xyz/<config-id>
 
 - Do not invent credential values.
 - Do not place secrets in saved static headers.
+- Do not return markdown around the JSON object.
+- Do not guess uncertain values; use `null` or an empty string and add a warning.
 - Do not tell the user to save before testing.
 - Do not omit ambiguous assumptions.
 - Do not suggest editing or deleting a saved runner; saved runners are intentionally immutable.
+
+## Output
+
+Return a JSON object with `summary`, `overallCertainty`, `values`, `explanations`, and `warnings`. Include a `certainty` and `reason` for every non-blank value in `explanations`.
 
 ## Reference
 

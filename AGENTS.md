@@ -8,6 +8,7 @@ This project is for non-technical users configuring paginated APIs for Clay HTTP
 - Put guidance inline near the relevant fields.
 - Never require users to understand Worker internals.
 - Make testing feel safe and obvious.
+- Keep AI-assisted setup pasteable: strict JSON object in, clear applied values and certainty back to the user.
 - Treat saved runner URLs as production dependencies.
 
 ## Safety Invariants

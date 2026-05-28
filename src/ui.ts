@@ -269,6 +269,13 @@ export function renderApp(basePath = ""): string {
       color: var(--content);
       background: var(--surface-soft);
     }
+    .object-box {
+      min-height: 150px;
+    }
+    .ai-review {
+      white-space: pre-wrap;
+      color: #01418d;
+    }
     code, pre {
       font-family: var(--font-mono);
       font-size: 12px;
@@ -394,7 +401,7 @@ export function renderApp(basePath = ""): string {
 
         <div class="section">
           <div class="section-title"><span class="step">AI</span><h3>AI setup helper</h3></div>
-          <div class="section-copy">Use this when you have API docs but do not know which fields to enter. Add the docs URL, upload or paste docs if you have them, then copy the generated prompt into Claude, ChatGPT, or another AI. The AI should return exact values for every form field below.</div>
+          <div class="section-copy">Use this when you have API docs but do not know which fields to enter. Generate a prompt, send it to Claude, ChatGPT, or another AI, then paste the returned JSON object back here. The app fills the values the AI provided and clears untouched defaults it did not provide.</div>
           <div class="grid-2">
             <label>API documentation URL<input id="docsUrl" placeholder="https://docs.example.com/api/list-endpoint"></label>
             <label>What data do you want Clay to fetch?<input id="docsGoal" placeholder="Example: G2 buyer intent event stream for a date range"></label>
@@ -407,6 +414,13 @@ export function renderApp(basePath = ""): string {
             <span id="promptStatus" class="hint"></span>
           </div>
           <label>Prompt to paste into AI<textarea id="aiPrompt" class="prompt-box" readonly spellcheck="false"></textarea></label>
+          <label>Paste AI object<textarea id="aiObjectPaste" class="object-box" spellcheck="false" placeholder='Paste the full JSON object returned by the AI here'></textarea></label>
+          <div class="actions">
+            <button id="applyAiObjectBtn" type="button">Apply AI object</button>
+            <button id="clearAiObjectBtn" type="button">Clear object</button>
+            <span id="aiObjectStatus" class="hint"></span>
+          </div>
+          <div id="aiObjectReview" class="notice ai-review" hidden></div>
         </div>
 
         <div class="section">
@@ -415,7 +429,7 @@ export function renderApp(basePath = ""): string {
           <div class="grid-2">
             <label>Name <span class="required">required</span><input id="name" value="G2 Buyer Stream v2 API"></label>
             <label>Method
-              <select id="method"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option></select>
+              <select id="method"><option value="">Select method</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option></select>
             </label>
           </div>
           <label>Target URL <span class="required">required</span><input id="targetUrl" value="https://data.g2.com/api/v1/ahoy/remote-event-streams"></label>
@@ -423,7 +437,7 @@ export function renderApp(basePath = ""): string {
           <div class="grid-3">
             <label>Results path <span class="required">required</span><input id="resultPath" value="data"></label>
             <label>Response
-              <select id="responseMode"><option value="array">Array</option><option value="envelope">Envelope</option></select>
+              <select id="responseMode"><option value="">Select response</option><option value="array">Array</option><option value="envelope">Envelope</option></select>
             </label>
             <label>Max items<input id="maxItems" type="number" min="1" placeholder="Optional"></label>
           </div>
@@ -435,6 +449,7 @@ export function renderApp(basePath = ""): string {
           <div class="grid-3">
             <label>Type
               <select id="paginationType">
+                <option value="">Select type</option>
                 <option value="jsonapi">JSON next link</option>
                 <option value="page">Page number</option>
                 <option value="offset">Offset limit</option>
@@ -581,6 +596,32 @@ export function renderApp(basePath = ""): string {
         initialCursor: ""
       }
     };
+    const MISSING = Symbol("missing");
+    const fieldDefaults = {
+      name: defaults.name,
+      method: defaults.method,
+      targetUrl: defaults.targetUrl,
+      resultPath: defaults.resultPath,
+      responseMode: defaults.responseMode,
+      maxItems: "",
+      paginationType: defaults.pagination.type,
+      maxPages: String(defaults.pagination.maxPages),
+      pageSize: String(defaults.pagination.pageSize),
+      pageParam: defaults.pagination.pageParam,
+      pageSizeParam: defaults.pagination.pageSizeParam,
+      startPage: String(defaults.pagination.startPage),
+      nextLinkPath: defaults.pagination.nextLinkPath,
+      totalPagesPath: defaults.pagination.totalPagesPath,
+      offsetParam: defaults.pagination.offsetParam,
+      limitParam: defaults.pagination.limitParam,
+      startOffset: String(defaults.pagination.startOffset),
+      cursorParam: defaults.pagination.cursorParam,
+      nextCursorPath: defaults.pagination.nextCursorPath,
+      initialCursor: defaults.pagination.initialCursor,
+      passThroughHeaders: defaults.passThroughHeaders.join(","),
+      bodyTemplate: defaults.bodyTemplate,
+      queryString: ""
+    };
 
     async function api(path, options = {}) {
       const response = await fetch(BASE_PATH + path, {
@@ -606,6 +647,11 @@ export function renderApp(basePath = ""): string {
       $("promptStatus").textContent = message;
     }
 
+    function setAiObjectStatus(message, ok = true) {
+      $("aiObjectStatus").textContent = message;
+      $("aiObjectStatus").style.color = ok ? "var(--secondary)" : "var(--danger)";
+    }
+
     function buildAiPrompt() {
       const docsUrl = $("docsUrl").value.trim();
       const goal = $("docsGoal").value.trim();
@@ -618,7 +664,7 @@ export function renderApp(basePath = ""): string {
         "https://github.com/chrisrcardone/clay-paginate/blob/main/AI_CONFIG_GUIDE.md",
         "",
         "Task:",
-        "Given the API documentation URL, any attached API documentation file, and any pasted excerpt below, return the exact values a non-technical user should enter into the Clay Pagination Runner form.",
+        "Given the API documentation URL, any attached API documentation file, and any pasted excerpt below, return one strict JSON object that a non-technical user can paste back into the Clay Pagination Runner app.",
         "",
         "API documentation URL:",
         docsUrl || "(not provided)",
@@ -640,43 +686,51 @@ export function renderApp(basePath = ""): string {
         "5. Prefer small, safe test settings first: maxPages 3 to 10 and a documented pageSize. The user can increase after a successful test.",
         "6. resultPath must point to the array of rows in the JSON response, such as data, results, items, records, or products.",
         "7. If the API returns JSON:API links.next, use type jsonapi, nextLinkPath links.next, and totalPagesPath meta.page_count if available.",
-        "8. If docs are ambiguous, state the assumption and give the safest testable config.",
+        "8. For every non-blank value you return, include an explanation with certainty: high, medium, or low.",
+        "9. If a value is not confirmed by the docs, leave it blank or null instead of guessing, explain the uncertainty, and add a warning.",
+        "10. Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.",
         "",
-        "Return exactly this structure:",
-        "Summary: one sentence explaining the selected endpoint and pagination method.",
-        "",
-        "Form values:",
-        "- Name:",
-        "- Method:",
-        "- Target URL:",
-        "- Results path:",
-        "- Response:",
-        "- Max items:",
-        "- Pagination type:",
-        "- Max pages:",
-        "- Page size:",
-        "- Page param:",
-        "- Page size param:",
-        "- Start page:",
-        "- Next link path:",
-        "- Total pages path:",
-        "- Offset param:",
-        "- Limit param:",
-        "- Start offset:",
-        "- Cursor param:",
-        "- Next cursor path:",
-        "- Initial cursor:",
-        "- Pass-through headers:",
-        "- Static headers:",
-        "- Body template:",
-        "- Suggested test query params:",
-        "- Suggested test credential headers:",
-        "",
-        "JSON config:",
-        "Return a JSON object matching the form values, without credential values.",
-        "",
-        "Warnings:",
-        "List anything the user must verify in the docs before saving."
+        "Return exactly this JSON object shape:",
+        "{",
+        "  \\"summary\\": \\"One sentence explaining the endpoint and pagination method.\\",",
+        "  \\"overallCertainty\\": \\"high | medium | low\\",",
+        "  \\"values\\": {",
+        "    \\"name\\": \\"Human-readable immutable runner name\\",",
+        "    \\"method\\": \\"GET\\",",
+        "    \\"targetUrl\\": \\"https://api.example.com/items?api_key={{key}}\\",",
+        "    \\"resultPath\\": \\"data\\",",
+        "    \\"responseMode\\": \\"array\\",",
+        "    \\"maxItems\\": null,",
+        "    \\"pagination\\": {",
+        "      \\"type\\": \\"jsonapi | page | offset | cursor | linkHeader | none\\",",
+        "      \\"maxPages\\": 5,",
+        "      \\"pageSize\\": 25,",
+        "      \\"pageParam\\": \\"page[number]\\",",
+        "      \\"pageSizeParam\\": \\"page[size]\\",",
+        "      \\"startPage\\": 1,",
+        "      \\"nextLinkPath\\": \\"links.next\\",",
+        "      \\"totalPagesPath\\": \\"meta.page_count\\",",
+        "      \\"offsetParam\\": null,",
+        "      \\"limitParam\\": null,",
+        "      \\"startOffset\\": null,",
+        "      \\"cursorParam\\": null,",
+        "      \\"nextCursorPath\\": null,",
+        "      \\"initialCursor\\": null",
+        "    },",
+        "    \\"passThroughHeaders\\": [\\"authorization\\"],",
+        "    \\"staticHeaders\\": [{ \\"name\\": \\"Accept\\", \\"value\\": \\"application/json\\" }],",
+        "    \\"bodyTemplate\\": \\"\\",",
+        "    \\"testQueryParams\\": \\"key=replace-with-test-key\\",",
+        "    \\"testCredentialHeaders\\": [{ \\"name\\": \\"Authorization\\", \\"value\\": \\"\\" }]",
+        "  },",
+        "  \\"explanations\\": {",
+        "    \\"targetUrl\\": { \\"certainty\\": \\"high\\", \\"reason\\": \\"Why this endpoint and URL placeholders are correct.\\" },",
+        "    \\"resultPath\\": { \\"certainty\\": \\"high\\", \\"reason\\": \\"Why this points to the returned array.\\" },",
+        "    \\"pagination\\": { \\"certainty\\": \\"high\\", \\"reason\\": \\"Why this pagination type and these params/paths are correct.\\" },",
+        "    \\"auth\\": { \\"certainty\\": \\"high\\", \\"reason\\": \\"Why credentials should be forwarded this way without storing secrets.\\" }",
+        "  },",
+        "  \\"warnings\\": [\\"Anything the user must verify before saving the immutable runner.\\"]",
+        "}"
       ].join("\\n");
     }
 
@@ -721,6 +775,350 @@ export function renderApp(basePath = ""): string {
         .filter((row) => row.name && row.value);
     }
 
+    function readHeaderRowsRaw(containerId) {
+      return Array.from($(containerId).querySelectorAll(".header-row"))
+        .map((row) => ({
+          name: row.querySelector(".header-name").value.trim(),
+          value: row.querySelector(".header-value").value.trim()
+        }));
+    }
+
+    function parseAiObjectText(text) {
+      const trimmed = text.trim();
+      if (!trimmed) throw new Error("Paste the JSON object returned by the AI first.");
+      const fence = String.fromCharCode(96) + String.fromCharCode(96) + String.fromCharCode(96);
+      const unfenced = trimmed
+        .replace(new RegExp("^" + fence + "(?:json|javascript|js)?\\\\s*", "i"), "")
+        .replace(new RegExp(fence + "$", "i"), "")
+        .trim()
+        .replace(/^const\\s+[A-Za-z0-9_$]+\\s*=\\s*/i, "")
+        .replace(/^export\\s+default\\s+/i, "")
+        .replace(/;\\s*$/i, "");
+      const objectText = extractJsonObject(unfenced);
+      try {
+        return JSON.parse(objectText);
+      } catch {
+        throw new Error("The pasted object is not strict JSON. Ask the AI to return JSON only, with double quotes and no comments.");
+      }
+    }
+
+    function extractJsonObject(text) {
+      const start = text.indexOf("{");
+      if (start === -1) throw new Error("No JSON object found.");
+      let depth = 0;
+      let quote = "";
+      let escaped = false;
+      for (let index = start; index < text.length; index += 1) {
+        const char = text[index];
+        if (quote) {
+          if (escaped) {
+            escaped = false;
+          } else if (char === "\\\\") {
+            escaped = true;
+          } else if (char === quote) {
+            quote = "";
+          }
+          continue;
+        }
+        if (char === "\\\"" || char === "'") {
+          quote = char;
+          continue;
+        }
+        if (char === "{") depth += 1;
+        if (char === "}") {
+          depth -= 1;
+          if (depth === 0) return text.slice(start, index + 1);
+        }
+      }
+      throw new Error("The JSON object looks incomplete.");
+    }
+
+    function getAiRoot(parsed) {
+      for (const key of ["values", "formValues", "config", "configuration"]) {
+        const value = looseGet(parsed, key);
+        if (value && typeof value === "object" && !Array.isArray(value)) return value;
+      }
+      return parsed;
+    }
+
+    function looseGet(source, path) {
+      if (!source || typeof source !== "object") return MISSING;
+      const parts = Array.isArray(path) ? path : String(path).split(".");
+      let current = source;
+      for (const part of parts) {
+        if (!current || typeof current !== "object") return MISSING;
+        const key = Object.keys(current).find((candidate) => normalizeObjectKey(candidate) === normalizeObjectKey(part));
+        if (!key) return MISSING;
+        current = current[key];
+      }
+      return current;
+    }
+
+    function firstAiValue(source, paths) {
+      for (const path of paths) {
+        const value = looseGet(source, path);
+        if (value !== MISSING) return value;
+      }
+      return MISSING;
+    }
+
+    function normalizeObjectKey(key) {
+      return String(key).toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    function toFormString(value) {
+      if (value === MISSING) return MISSING;
+      if (value === null || value === undefined) return "";
+      if (typeof value === "object") return JSON.stringify(value, null, 2);
+      return String(value);
+    }
+
+    function toFormNumber(value) {
+      if (value === MISSING) return MISSING;
+      if (value === null || value === "") return "";
+      const number = Number(value);
+      return Number.isFinite(number) ? String(number) : "";
+    }
+
+    function toMethod(value) {
+      if (value === MISSING) return MISSING;
+      const method = String(value || "").trim().toUpperCase();
+      return ["GET", "POST", "PUT", "PATCH"].includes(method) ? method : "";
+    }
+
+    function toResponseMode(value) {
+      if (value === MISSING) return MISSING;
+      const mode = String(value || "").trim().toLowerCase();
+      if (mode === "array") return "array";
+      if (mode === "envelope" || mode === "object") return "envelope";
+      return "";
+    }
+
+    function toPaginationType(value) {
+      if (value === MISSING) return MISSING;
+      const type = normalizeObjectKey(value);
+      if (type === "jsonapi" || type === "jsonnextlink" || type === "jsonapilinks") return "jsonapi";
+      if (type === "page" || type === "pagenumber") return "page";
+      if (type === "offset" || type === "offsetlimit") return "offset";
+      if (type === "cursor" || type === "cursorbased") return "cursor";
+      if (type === "linkheader" || type === "httplinkheader") return "linkHeader";
+      if (type === "none" || type === "singlepage") return "none";
+      return "";
+    }
+
+    function formatHeaderNames(value) {
+      if (value === MISSING) return MISSING;
+      if (Array.isArray(value)) {
+        return value
+          .map((item) => typeof item === "string" ? item : item?.name || item?.header || item?.key)
+          .filter(Boolean)
+          .join(",");
+      }
+      if (value && typeof value === "object") return Object.keys(value).join(",");
+      return String(value || "");
+    }
+
+    function normalizeHeaderPairs(value, keepValues = true) {
+      if (value === MISSING) return MISSING;
+      if (value === null || value === "") return [];
+      const rows = [];
+      const add = (name, headerValue) => {
+        const cleanName = String(name || "").trim();
+        if (!cleanName) return;
+        rows.push({ name: cleanName, value: keepValues ? String(headerValue || "").trim() : "" });
+      };
+
+      if (Array.isArray(value)) {
+        value.forEach((item) => {
+          if (typeof item === "string") {
+            const parsed = parseHeaderLine(item);
+            add(parsed.name, parsed.value);
+          } else if (item && typeof item === "object") {
+            add(item.name || item.header || item.key, item.value || "");
+          }
+        });
+        return rows;
+      }
+
+      if (value && typeof value === "object") {
+        Object.entries(value).forEach(([name, headerValue]) => add(name, headerValue));
+        return rows;
+      }
+
+      String(value)
+        .split(/\\n|,/)
+        .map(parseHeaderLine)
+        .forEach((header) => add(header.name, header.value));
+      return rows;
+    }
+
+    function parseHeaderLine(line) {
+      const value = String(line || "").trim();
+      const separator = value.indexOf(":");
+      if (separator === -1) return { name: value, value: "" };
+      return { name: value.slice(0, separator).trim(), value: value.slice(separator + 1).trim() };
+    }
+
+    function formatQueryParams(value) {
+      if (value === MISSING) return MISSING;
+      if (value === null) return "";
+      if (typeof value === "string") return value;
+      if (Array.isArray(value)) return value.map((entry) => String(entry)).filter(Boolean).join("&");
+      if (typeof value === "object") {
+        const params = new URLSearchParams();
+        Object.entries(value).forEach(([key, paramValue]) => {
+          if (paramValue !== null && paramValue !== undefined) params.set(key, String(paramValue));
+        });
+        return params.toString();
+      }
+      return String(value);
+    }
+
+    function applyFieldFromAi(id, value, defaultValue, formatter, applied, blanked) {
+      if (value !== MISSING) {
+        $(id).value = formatter(value);
+        applied.push(id);
+        return;
+      }
+      if (String($(id).value).trim() === String(defaultValue ?? "").trim()) {
+        $(id).value = "";
+        blanked.push(id);
+      }
+    }
+
+    function rowsEqual(left, right) {
+      return JSON.stringify(left) === JSON.stringify(right);
+    }
+
+    function applyHeadersFromAi(containerId, value, defaultRows, applied, blanked, keepValues = true) {
+      if (value !== MISSING) {
+        setHeaderRows(containerId, normalizeHeaderPairs(value, keepValues));
+        applied.push(containerId);
+        return;
+      }
+      if (rowsEqual(readHeaderRowsRaw(containerId), defaultRows)) {
+        setHeaderRows(containerId, []);
+        blanked.push(containerId);
+      }
+    }
+
+    function applyAiObject() {
+      if (state.locked) {
+        setAiObjectStatus("Loaded runners are locked. Click New runner first.", false);
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = parseAiObjectText($("aiObjectPaste").value);
+      } catch (error) {
+        setAiObjectStatus(error.message, false);
+        return;
+      }
+
+      const source = getAiRoot(parsed);
+      const applied = [];
+      const blanked = [];
+      const fields = {
+        name: firstAiValue(source, ["name"]),
+        method: firstAiValue(source, ["method"]),
+        targetUrl: firstAiValue(source, ["targetUrl", "url", "endpoint"]),
+        resultPath: firstAiValue(source, ["resultPath", "resultsPath", "dataPath"]),
+        responseMode: firstAiValue(source, ["responseMode", "response"]),
+        maxItems: firstAiValue(source, ["maxItems", "pagination.maxItems"]),
+        paginationType: firstAiValue(source, ["pagination.type", "paginationType"]),
+        maxPages: firstAiValue(source, ["pagination.maxPages", "maxPages"]),
+        pageSize: firstAiValue(source, ["pagination.pageSize", "pageSize"]),
+        pageParam: firstAiValue(source, ["pagination.pageParam", "pageParam"]),
+        pageSizeParam: firstAiValue(source, ["pagination.pageSizeParam", "pageSizeParam"]),
+        startPage: firstAiValue(source, ["pagination.startPage", "startPage"]),
+        nextLinkPath: firstAiValue(source, ["pagination.nextLinkPath", "nextLinkPath"]),
+        totalPagesPath: firstAiValue(source, ["pagination.totalPagesPath", "totalPagesPath"]),
+        offsetParam: firstAiValue(source, ["pagination.offsetParam", "offsetParam"]),
+        limitParam: firstAiValue(source, ["pagination.limitParam", "limitParam"]),
+        startOffset: firstAiValue(source, ["pagination.startOffset", "startOffset"]),
+        cursorParam: firstAiValue(source, ["pagination.cursorParam", "cursorParam"]),
+        nextCursorPath: firstAiValue(source, ["pagination.nextCursorPath", "nextCursorPath"]),
+        initialCursor: firstAiValue(source, ["pagination.initialCursor", "initialCursor"]),
+        passThroughHeaders: firstAiValue(source, ["passThroughHeaders", "auth.passThroughHeaders"]),
+        staticHeaders: firstAiValue(source, ["staticHeaders", "headers.static"]),
+        bodyTemplate: firstAiValue(source, ["bodyTemplate", "body"]),
+        queryString: firstAiValue(source, ["testQueryParams", "suggestedTestQueryParams", "queryString"]),
+        credentialHeaders: firstAiValue(source, ["testCredentialHeaders", "suggestedTestCredentialHeaders", "credentialHeaders"])
+      };
+
+      applyFieldFromAi("name", fields.name, fieldDefaults.name, toFormString, applied, blanked);
+      applyFieldFromAi("method", fields.method, fieldDefaults.method, toMethod, applied, blanked);
+      applyFieldFromAi("targetUrl", fields.targetUrl, fieldDefaults.targetUrl, toFormString, applied, blanked);
+      applyFieldFromAi("resultPath", fields.resultPath, fieldDefaults.resultPath, toFormString, applied, blanked);
+      applyFieldFromAi("responseMode", fields.responseMode, fieldDefaults.responseMode, toResponseMode, applied, blanked);
+      applyFieldFromAi("maxItems", fields.maxItems, fieldDefaults.maxItems, toFormNumber, applied, blanked);
+      applyFieldFromAi("paginationType", fields.paginationType, fieldDefaults.paginationType, toPaginationType, applied, blanked);
+      applyFieldFromAi("maxPages", fields.maxPages, fieldDefaults.maxPages, toFormNumber, applied, blanked);
+      applyFieldFromAi("pageSize", fields.pageSize, fieldDefaults.pageSize, toFormNumber, applied, blanked);
+      applyFieldFromAi("pageParam", fields.pageParam, fieldDefaults.pageParam, toFormString, applied, blanked);
+      applyFieldFromAi("pageSizeParam", fields.pageSizeParam, fieldDefaults.pageSizeParam, toFormString, applied, blanked);
+      applyFieldFromAi("startPage", fields.startPage, fieldDefaults.startPage, toFormNumber, applied, blanked);
+      applyFieldFromAi("nextLinkPath", fields.nextLinkPath, fieldDefaults.nextLinkPath, toFormString, applied, blanked);
+      applyFieldFromAi("totalPagesPath", fields.totalPagesPath, fieldDefaults.totalPagesPath, toFormString, applied, blanked);
+      applyFieldFromAi("offsetParam", fields.offsetParam, fieldDefaults.offsetParam, toFormString, applied, blanked);
+      applyFieldFromAi("limitParam", fields.limitParam, fieldDefaults.limitParam, toFormString, applied, blanked);
+      applyFieldFromAi("startOffset", fields.startOffset, fieldDefaults.startOffset, toFormNumber, applied, blanked);
+      applyFieldFromAi("cursorParam", fields.cursorParam, fieldDefaults.cursorParam, toFormString, applied, blanked);
+      applyFieldFromAi("nextCursorPath", fields.nextCursorPath, fieldDefaults.nextCursorPath, toFormString, applied, blanked);
+      applyFieldFromAi("initialCursor", fields.initialCursor, fieldDefaults.initialCursor, toFormString, applied, blanked);
+      applyFieldFromAi("passThroughHeaders", fields.passThroughHeaders, fieldDefaults.passThroughHeaders, formatHeaderNames, applied, blanked);
+      applyFieldFromAi("bodyTemplate", fields.bodyTemplate, fieldDefaults.bodyTemplate, toFormString, applied, blanked);
+      applyFieldFromAi("queryString", fields.queryString, fieldDefaults.queryString, formatQueryParams, applied, blanked);
+      applyHeadersFromAi("staticHeaders", fields.staticHeaders, defaults.staticHeaders, applied, blanked, true);
+      applyHeadersFromAi("credentialHeaders", fields.credentialHeaders, [{ name: "Authorization", value: "" }], applied, blanked, false);
+
+      updatePaginationFields();
+      renderAiObjectReview(parsed, applied, blanked);
+      setAiObjectStatus("Applied " + applied.length + " field(s). Cleared " + blanked.length + " untouched default(s).");
+    }
+
+    function renderAiObjectReview(parsed, applied, blanked) {
+      const lines = [];
+      const summary = firstAiValue(parsed, ["summary"]);
+      const certainty = firstAiValue(parsed, ["overallCertainty", "certainty", "confidence"]);
+      const warnings = firstAiValue(parsed, ["warnings"]);
+      const explanations = firstAiValue(parsed, ["explanations"]);
+
+      if (summary !== MISSING && summary) lines.push("Summary: " + summary);
+      if (certainty !== MISSING && certainty) lines.push("Certainty: " + certainty);
+      if (applied.length) lines.push("Applied: " + applied.join(", "));
+      if (blanked.length) lines.push("Cleared untouched defaults: " + blanked.join(", "));
+      if (explanations !== MISSING && explanations && typeof explanations === "object") {
+        lines.push("");
+        lines.push("Explanations:");
+        Object.entries(explanations).slice(0, 8).forEach(([key, value]) => {
+          if (value && typeof value === "object") {
+            const fieldCertainty = value.certainty ? " [" + value.certainty + "]" : "";
+            lines.push("- " + key + fieldCertainty + ": " + (value.reason || JSON.stringify(value)));
+          } else {
+            lines.push("- " + key + ": " + value);
+          }
+        });
+      }
+      if (Array.isArray(warnings) && warnings.length) {
+        lines.push("");
+        lines.push("Warnings:");
+        warnings.forEach((warning) => lines.push("- " + warning));
+      }
+
+      $("aiObjectReview").textContent = lines.join("\\n") || "AI object applied. Review the form, test, then save.";
+      $("aiObjectReview").hidden = false;
+      print({
+        aiObjectApplied: true,
+        appliedFields: applied,
+        clearedUntouchedDefaults: blanked,
+        summary: summary === MISSING ? undefined : summary,
+        certainty: certainty === MISSING ? undefined : certainty,
+        warnings: warnings === MISSING ? [] : warnings
+      });
+    }
+
     function numberOrUndefined(id) {
       const value = $(id).value.trim();
       return value === "" ? undefined : Number(value);
@@ -755,6 +1153,45 @@ export function renderApp(basePath = ""): string {
           initialCursor: $("initialCursor").value.trim()
         }
       };
+    }
+
+    function requireFormReady() {
+      const missing = [];
+      const requireValue = (id, label) => {
+        if (!$(id).value.trim()) missing.push(label);
+      };
+
+      requireValue("name", "Name");
+      requireValue("method", "Method");
+      requireValue("targetUrl", "Target URL");
+      requireValue("resultPath", "Results path");
+      requireValue("responseMode", "Response");
+      requireValue("paginationType", "Pagination type");
+      requireValue("maxPages", "Max pages");
+
+      const type = $("paginationType").value;
+      if (type === "jsonapi" || type === "page") {
+        requireValue("pageParam", "Page param");
+        requireValue("pageSizeParam", "Page size param");
+        requireValue("startPage", "Start page");
+      }
+      if (type === "jsonapi") {
+        requireValue("nextLinkPath", "Next link path");
+      }
+      if (type === "offset") {
+        requireValue("offsetParam", "Offset param");
+        requireValue("limitParam", "Limit param");
+        requireValue("startOffset", "Start offset");
+        requireValue("pageSize", "Page size");
+      }
+      if (type === "cursor") {
+        requireValue("cursorParam", "Cursor param");
+        requireValue("nextCursorPath", "Next cursor path");
+      }
+
+      if (missing.length) {
+        throw new Error("Fill required fields before testing or saving: " + missing.join(", "));
+      }
     }
 
     function applyConfig(config) {
@@ -809,6 +1246,7 @@ export function renderApp(basePath = ""): string {
       editableIds.forEach((id) => { if ($(id)) $(id).disabled = locked; });
       $("addStaticHeader").disabled = locked;
       $("saveBtn").disabled = locked;
+      if ($("applyAiObjectBtn")) $("applyAiObjectBtn").disabled = locked;
       $("lockedNotice").hidden = !locked;
       Array.from($("staticHeaders").querySelectorAll("input, button")).forEach((el) => { el.disabled = locked; });
     }
@@ -847,6 +1285,7 @@ export function renderApp(basePath = ""): string {
     }
 
     async function runTest() {
+      requireFormReady();
       setStatus("Testing...", true);
       const body = await api("/api/test", {
         method: "POST",
@@ -863,6 +1302,7 @@ export function renderApp(basePath = ""): string {
 
     async function saveRunner() {
       if (state.locked) return;
+      requireFormReady();
       setStatus("Saving...", true);
       const body = await api("/api/configs", { method: "POST", body: JSON.stringify({ config: readConfig() }) });
       state.id = body.config.id;
@@ -928,6 +1368,9 @@ export function renderApp(basePath = ""): string {
       setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
       $("runUrl").hidden = true;
       $("analyticsPanel").hidden = true;
+      $("aiObjectReview").hidden = true;
+      $("aiObjectPaste").value = "";
+      setAiObjectStatus("");
       print({});
       setStatus("", true);
     });
@@ -948,6 +1391,12 @@ export function renderApp(basePath = ""): string {
       if (!$("aiPrompt").value.trim()) generatePrompt();
       await navigator.clipboard.writeText($("aiPrompt").value);
       setPromptStatus("Copied.");
+    });
+    $("applyAiObjectBtn").addEventListener("click", applyAiObject);
+    $("clearAiObjectBtn").addEventListener("click", () => {
+      $("aiObjectPaste").value = "";
+      $("aiObjectReview").hidden = true;
+      setAiObjectStatus("");
     });
     $("docsFile").addEventListener("change", (event) => {
       const file = event.target.files?.[0];

@@ -6,7 +6,7 @@ Production app: https://paginate.chris-apis.xyz
 
 ## Goal
 
-Return exact form values that the user can paste into the app. The app tests the upstream API, saves an immutable runner configuration, and gives Clay one stable URL:
+Return one strict JSON object that the user can paste into the app. The app parses that object, fills the provided values, clears untouched defaults that were not provided by the AI, tests the upstream API, saves an immutable runner configuration, and gives Clay one stable URL:
 
 ```text
 https://paginate.chris-apis.xyz/<config-id>
@@ -95,43 +95,69 @@ Use `none` when:
 
 ## Output Format
 
-Return this structure:
+Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.
 
-```text
-Summary: one sentence explaining the selected endpoint and pagination method.
+For every non-blank value, include an explanation with `certainty` of `high`, `medium`, or `low`. If the docs do not confirm a value, use `null` or an empty string instead of guessing, then explain the uncertainty in `warnings`.
 
-Form values:
-- Name:
-- Method:
-- Target URL:
-- Results path:
-- Response:
-- Max items:
-- Pagination type:
-- Max pages:
-- Page size:
-- Page param:
-- Page size param:
-- Start page:
-- Next link path:
-- Total pages path:
-- Offset param:
-- Limit param:
-- Start offset:
-- Cursor param:
-- Next cursor path:
-- Initial cursor:
-- Pass-through headers:
-- Static headers:
-- Body template:
-- Suggested test query params:
-- Suggested test credential headers:
-
-JSON config:
-Return a JSON object matching the form values, without credential values.
-
-Warnings:
-List anything the user must verify in the docs before saving.
+```json
+{
+  "summary": "One sentence explaining the selected endpoint and pagination method.",
+  "overallCertainty": "high",
+  "values": {
+    "name": "G2 Buyer Stream v2 API",
+    "method": "GET",
+    "targetUrl": "https://data.g2.com/api/v1/ahoy/remote-event-streams",
+    "resultPath": "data",
+    "responseMode": "array",
+    "maxItems": null,
+    "pagination": {
+      "type": "jsonapi",
+      "maxPages": 5,
+      "pageSize": 25,
+      "pageParam": "page[number]",
+      "pageSizeParam": "page[size]",
+      "startPage": 1,
+      "nextLinkPath": "links.next",
+      "totalPagesPath": "meta.page_count",
+      "offsetParam": null,
+      "limitParam": null,
+      "startOffset": null,
+      "cursorParam": null,
+      "nextCursorPath": null,
+      "initialCursor": null
+    },
+    "passThroughHeaders": ["authorization"],
+    "staticHeaders": [
+      { "name": "Content-Type", "value": "application/vnd.api+json" }
+    ],
+    "bodyTemplate": "",
+    "testQueryParams": "",
+    "testCredentialHeaders": [
+      { "name": "Authorization", "value": "" }
+    ]
+  },
+  "explanations": {
+    "targetUrl": {
+      "certainty": "high",
+      "reason": "The docs identify this as the list endpoint for the requested data."
+    },
+    "resultPath": {
+      "certainty": "high",
+      "reason": "Example responses put returned records under the top-level data array."
+    },
+    "pagination": {
+      "certainty": "high",
+      "reason": "The docs show JSON:API page[number]/page[size] params and links.next."
+    },
+    "auth": {
+      "certainty": "high",
+      "reason": "The API uses bearer auth, so only the authorization header name should be saved as pass-through."
+    }
+  },
+  "warnings": [
+    "Replace test credential placeholders in the app before running the test."
+  ]
+}
 ```
 
 ## Reliability Checklist
