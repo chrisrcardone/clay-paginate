@@ -104,7 +104,7 @@ The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. G
 ## Reliability model
 
 - Saved runner URLs are immutable and stable.
-- The runner caps pagination with `maxPages` and optional `maxItems`.
+- The runner caps pagination with `maxPages` and optional `maxItems`; `maxPages` is a safety cap, not a requested page count, and pagination stops naturally when the API has no next page.
 - GET page fetches retry short transient failures such as 429 and 5xx.
 - Upstream errors return full body content to Clay for debugging, but are not stored.
 - Remote smoke tests should be cleaned from D1 after verification.

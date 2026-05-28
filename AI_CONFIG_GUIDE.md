@@ -38,8 +38,8 @@ Endpoint:
 Pagination:
 
 - `Pagination type`: One of `jsonapi`, `page`, `offset`, `cursor`, `linkHeader`, `none`.
-- `Max pages`: Use a safe test value, usually 3 to 10. The app allows up to 250.
-- `Page size`: Use the documented page size. Prefer a small test value if unsure.
+- `Max pages`: Production safety cap, not a sample size. Use a value high enough to collect all pages, usually `250`, or up to `1000` for large result sets. The runner stops automatically when there is no next page.
+- `Page size`: Use the largest documented page size unless the docs warn against it. Larger page sizes reduce API calls and make full pagination more reliable.
 - `Page param`: Page number query parameter, for example `page`, `page[number]`, or `page_number`.
 - `Page size param`: Page size query parameter, for example `per_page`, `limit`, or `page[size]`.
 - `Start page`: Usually `1`, sometimes `0`.
@@ -99,6 +99,8 @@ Return strict JSON only. Do not wrap it in markdown and do not add prose outside
 
 For every non-blank value, include an explanation with `certainty` of `high`, `medium`, or `low`. If the docs do not confirm a value, use `null` or an empty string instead of guessing, then explain the uncertainty in `warnings`.
 
+Treat current form defaults as examples only. Do not copy defaults into the output unless the API documentation or user goal confirms them. If the docs URL conflicts with a default, prefer the docs value or leave the field blank with a warning.
+
 ```json
 {
   "summary": "One sentence explaining the selected endpoint and pagination method.",
@@ -112,8 +114,8 @@ For every non-blank value, include an explanation with `certainty` of `high`, `m
     "maxItems": null,
     "pagination": {
       "type": "jsonapi",
-      "maxPages": 5,
-      "pageSize": 25,
+      "maxPages": 250,
+      "pageSize": 100,
       "pageParam": "page[number]",
       "pageSizeParam": "page[size]",
       "startPage": 1,
@@ -163,8 +165,8 @@ For every non-blank value, include an explanation with `certainty` of `high`, `m
 ## Reliability Checklist
 
 - Prefer documented pagination params over guessed params.
-- Use a small `Max pages` during testing.
-- Use a documented page size.
+- Use a high enough `Max pages` cap to capture all expected pages.
+- Use the largest documented page size unless the API warns against it.
 - Confirm `Results path` points to an array.
 - Confirm the first test returns expected records and not an error envelope.
 - Confirm next-page URLs or cursors are redacted and do not expose secrets.

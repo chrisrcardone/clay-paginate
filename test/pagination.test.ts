@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getByPath } from "../src/jsonPath";
-import { buildPageUrl, normalizeTargetUrl, runPagination } from "../src/pagination";
+import { buildPageUrl, normalizeConfig, normalizeTargetUrl, runPagination } from "../src/pagination";
 import type { RunnerConfig } from "../src/types";
 
 const baseConfig: RunnerConfig = {
@@ -50,6 +50,13 @@ describe("target URL normalization", () => {
     expect(normalizeTargetUrl("HTTPS://DATA.G2.COM:443/api/v1/vendors?b=2&a=1#ignore")).toBe(
       "https://data.g2.com/api/v1/vendors?a=1&b=2",
     );
+  });
+});
+
+describe("config normalization", () => {
+  it("treats maxPages as a full-run safety cap", () => {
+    expect(normalizeConfig({ ...baseConfig, pagination: { ...baseConfig.pagination, maxPages: Number.NaN } }).pagination.maxPages).toBe(250);
+    expect(normalizeConfig({ ...baseConfig, pagination: { ...baseConfig.pagination, maxPages: 5000 } }).pagination.maxPages).toBe(1000);
   });
 });
 

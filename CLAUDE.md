@@ -11,7 +11,9 @@ When helping configure a runner for a user:
 - Never include real credential values in saved fields.
 - Use URL placeholders such as `{{key}}` for URL-based API keys.
 - Recommend testing before saving because saved runners are immutable.
-- Prefer conservative test settings: small page size and low max pages.
+- Treat form defaults as examples, not evidence from the API docs.
+- Use `maxPages` as a production safety cap, usually 250 and up to 1000 for large result sets.
+- Prefer the largest documented page size unless the API docs warn against it.
 
 When changing code:
 

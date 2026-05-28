@@ -1,8 +1,9 @@
 import { getByPath, toArray } from "./jsonPath";
 import type { HeaderPair, PageDebug, RunnerConfig, RunnerResult } from "./types";
 
-const DEFAULT_MAX_PAGES = 25;
+const DEFAULT_MAX_PAGES = 250;
 const DEFAULT_PAGE_SIZE = 100;
+const MAX_PAGES_LIMIT = 1000;
 const DEFAULT_TIMEOUT_MS = 25000;
 const GET_RETRY_ATTEMPTS = 2;
 const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
@@ -112,7 +113,7 @@ export async function runPagination(config: RunnerConfig, options: RunOptions = 
 }
 
 export function normalizeConfig(config: RunnerConfig, testMode = false): RunnerConfig {
-  const maxPages = clampNumber(config.pagination.maxPages, testMode ? 3 : DEFAULT_MAX_PAGES, 1, 250);
+  const maxPages = clampNumber(config.pagination.maxPages, DEFAULT_MAX_PAGES, 1, MAX_PAGES_LIMIT);
   const pageSize = config.pagination.pageSize
     ? clampNumber(config.pagination.pageSize, DEFAULT_PAGE_SIZE, 1, 10000)
     : undefined;

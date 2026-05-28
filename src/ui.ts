@@ -445,7 +445,7 @@ export function renderApp(basePath = ""): string {
 
         <div class="section">
           <div class="section-title"><span class="step">2</span><h3>Pagination</h3></div>
-          <div class="section-copy">Choose the pagination style from the API docs. Start conservatively, test with a small page size, then raise page size or max pages after the sample output looks right.</div>
+          <div class="section-copy">Choose the pagination style from the API docs. Max pages is a safety cap, not the number of pages to fetch; the runner stops automatically when the API has no next page.</div>
           <div class="grid-3">
             <label>Type
               <select id="paginationType">
@@ -458,7 +458,7 @@ export function renderApp(basePath = ""): string {
                 <option value="none">None</option>
               </select>
             </label>
-            <label>Max pages <span class="required">required</span><input id="maxPages" type="number" min="1" max="250" value="25"></label>
+            <label>Max pages <span class="required">required</span><input id="maxPages" type="number" min="1" max="1000" value="250"></label>
             <label>Page size<input id="pageSize" type="number" min="1" value="25"></label>
           </div>
           <div class="pagination-group" data-pagination-group="page">
@@ -581,7 +581,7 @@ export function renderApp(basePath = ""): string {
       bodyTemplate: "",
       pagination: {
         type: "jsonapi",
-        maxPages: 25,
+        maxPages: 250,
         pageSize: 25,
         pageParam: "page[number]",
         pageSizeParam: "page[size]",
@@ -675,7 +675,7 @@ export function renderApp(basePath = ""): string {
         "Pasted docs excerpt or notes:",
         excerpt || "(not provided; use the URL or attached file)",
         "",
-        "Current form defaults for context:",
+        "Current form defaults for context only. These are UI starter examples, not source documentation:",
         JSON.stringify(current, null, 2),
         "",
         "Important rules:",
@@ -683,12 +683,14 @@ export function renderApp(basePath = ""): string {
         "2. If an API key must be in the URL, use a URL placeholder like {{key}} in targetUrl and tell the user to call the generated Clay URL with ?key=their-key.",
         "3. Never put credential values in staticHeaders.",
         "4. Choose the safest pagination type from: jsonapi, page, offset, cursor, linkHeader, none.",
-        "5. Prefer small, safe test settings first: maxPages 3 to 10 and a documented pageSize. The user can increase after a successful test.",
+        "5. maxPages is a production safety cap, not a sample size. Set it high enough to capture all pages; usually 250, or up to 1000 for large result sets. The runner stops when there is no next page, so a high cap does not force extra calls.",
         "6. resultPath must point to the array of rows in the JSON response, such as data, results, items, records, or products.",
         "7. If the API returns JSON:API links.next, use type jsonapi, nextLinkPath links.next, and totalPagesPath meta.page_count if available.",
-        "8. For every non-blank value you return, include an explanation with certainty: high, medium, or low.",
-        "9. If a value is not confirmed by the docs, leave it blank or null instead of guessing, explain the uncertainty, and add a warning.",
-        "10. Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.",
+        "8. Use the largest documented pageSize unless the docs warn against it; larger page sizes reduce API calls and make full pagination more reliable.",
+        "9. Current form defaults are not evidence. Do not copy a default value unless the API docs or the user's goal confirms it. If the docs URL conflicts with a default, prefer the docs or leave the value blank and warn.",
+        "10. For every non-blank value you return, include an explanation with certainty: high, medium, or low.",
+        "11. If a value is not confirmed by the docs, leave it blank or null instead of guessing, explain the uncertainty, and add a warning.",
+        "12. Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.",
         "",
         "Return exactly this JSON object shape:",
         "{",
@@ -703,8 +705,8 @@ export function renderApp(basePath = ""): string {
         "    \\"maxItems\\": null,",
         "    \\"pagination\\": {",
         "      \\"type\\": \\"jsonapi | page | offset | cursor | linkHeader | none\\",",
-        "      \\"maxPages\\": 5,",
-        "      \\"pageSize\\": 25,",
+        "      \\"maxPages\\": 250,",
+        "      \\"pageSize\\": 100,",
         "      \\"pageParam\\": \\"page[number]\\",",
         "      \\"pageSizeParam\\": \\"page[size]\\",",
         "      \\"startPage\\": 1,",
@@ -1137,7 +1139,7 @@ export function renderApp(basePath = ""): string {
         bodyTemplate: $("bodyTemplate").value,
         pagination: {
           type: $("paginationType").value,
-          maxPages: Number($("maxPages").value || 25),
+          maxPages: Number($("maxPages").value || 250),
           maxItems: numberOrUndefined("maxItems"),
           pageSize: numberOrUndefined("pageSize"),
           pageParam: $("pageParam").value.trim(),
@@ -1206,7 +1208,7 @@ export function renderApp(basePath = ""): string {
       $("bodyTemplate").value = config.bodyTemplate || "";
       const p = config.pagination || {};
       $("paginationType").value = p.type || "jsonapi";
-      $("maxPages").value = p.maxPages || 25;
+      $("maxPages").value = p.maxPages || 250;
       $("maxItems").value = p.maxItems || "";
       $("pageSize").value = p.pageSize || "";
       $("pageParam").value = p.pageParam || "page[number]";
