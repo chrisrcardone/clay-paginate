@@ -8,19 +8,51 @@ export function renderApp(): string {
   <style>
     :root {
       color-scheme: light;
-      --bg: #f7f8fa;
-      --panel: #ffffff;
-      --ink: #15191f;
-      --muted: #667085;
-      --line: #d9dee7;
-      --accent: #126a6f;
-      --accent-ink: #ffffff;
-      --warn: #a15c00;
-      --danger: #b42318;
-      --ok: #067647;
-      --code: #101828;
-      --shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
-      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, Consolas, monospace;
+      --color-content-primary: #16181f;
+      --color-content-secondary: #525a69;
+      --color-content-tertiary: #717989;
+      --color-content-action: #0382f7;
+      --color-content-danger: #dd2c53;
+      --color-content-success: #0dac65;
+      --color-content-inverse: #ffffff;
+      --color-bg-primary: #ffffff;
+      --color-bg-secondary: #f7f8f9;
+      --color-bg-primary-hover: #eff1f3;
+      --color-bg-blue: #ecf6ff;
+      --color-bg-green: #eefff1;
+      --color-bg-red: #fff1f2;
+      --color-bg-yellow: #fff8d2;
+      --color-bg-purple-light: #f5f3ff;
+      --color-bg-action-inverse: #0382f7;
+      --color-bg-action-inverse-hover: #0667d9;
+      --color-border-primary: #d6d9df;
+      --color-border-secondary: #e6e8ec;
+      --color-border-action: #3ea2fd;
+      --color-outline-focus-ring: #b8ddff;
+      --color-text-blue: #0667d9;
+      --color-text-green: #078a52;
+      --color-text-red: #dd2c53;
+      --color-text-yellow: #b37601;
+      --color-text-purple: #7934f0;
+      --radius-sm: 4px;
+      --radius-md: 6px;
+      --radius-lg: 8px;
+      --radius-full: 9999px;
+      --shadow-md: 0 2px 4px rgba(22,24,31,0.04), 0 8px 16px rgba(22,24,31,0.05);
+      --bg: var(--color-bg-secondary);
+      --panel: var(--color-bg-primary);
+      --ink: var(--color-content-primary);
+      --muted: var(--color-content-secondary);
+      --line: var(--color-border-primary);
+      --accent: var(--color-content-action);
+      --accent-ink: var(--color-content-inverse);
+      --danger: var(--color-content-danger);
+      --ok: var(--color-content-success);
+      --code: #16181f;
+      --shadow: 0 1px 2px rgba(22,24,31,0.06);
+      font-family: var(--font-sans);
     }
 
     * { box-sizing: border-box; }
@@ -48,6 +80,17 @@ export function renderApp(): string {
       font-size: 18px;
       font-weight: 650;
       letter-spacing: 0;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .brand svg {
+      width: 22px;
+      height: 22px;
+      flex: none;
     }
     h2 {
       margin: 0 0 14px;
@@ -115,7 +158,8 @@ export function renderApp(): string {
     }
     input:focus, select:focus, textarea:focus {
       outline: 2px solid rgba(18, 106, 111, 0.22);
-      border-color: var(--accent);
+      outline-color: var(--color-outline-focus-ring);
+      border-color: var(--color-border-action);
     }
     button {
       display: inline-flex;
@@ -132,9 +176,9 @@ export function renderApp(): string {
       cursor: pointer;
     }
     button.primary {
-      background: var(--accent);
+      background: var(--color-bg-action-inverse);
       color: var(--accent-ink);
-      border-color: var(--accent);
+      border-color: var(--color-bg-action-inverse);
     }
     button.danger {
       border-color: #f0b8b3;
@@ -175,6 +219,66 @@ export function renderApp(): string {
       padding: 10px;
       background: #f0fbfc;
       color: #24484c;
+    }
+    .stepper {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .step-button {
+      justify-content: flex-start;
+      min-height: 48px;
+      padding: 8px;
+      border-color: var(--color-border-primary);
+      background: var(--color-bg-primary);
+    }
+    .step-button.active {
+      border-color: var(--color-border-action);
+      box-shadow: inset 0 0 0 1px var(--color-border-action);
+      background: var(--color-bg-blue);
+    }
+    .step-index {
+      display: inline-grid;
+      place-items: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 999px;
+      background: var(--color-bg-secondary);
+      color: var(--color-content-secondary);
+      font-size: 12px;
+      font-weight: 600;
+      flex: none;
+    }
+    .step-button.active .step-index {
+      background: var(--color-bg-action-inverse);
+      color: var(--color-content-inverse);
+    }
+    .step-title {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+    .step-title strong {
+      font-size: 13px;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .step-title span {
+      color: var(--color-content-secondary);
+      font-size: 11px;
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .flow-section[hidden] { display: none; }
+    .step-actions {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
     }
     .pill {
       display: inline-flex;
@@ -330,12 +434,20 @@ export function renderApp(): string {
       .header-row { grid-template-columns: 1fr; }
       .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .run-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .stepper { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Clay Pagination Runner</h1>
+    <div class="brand">
+      <svg viewBox="0 0 128 128" aria-hidden="true">
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M107.357 128C108.416 128 109.275 127.142 109.275 126.083L109.275 1.9175C109.275 0.858509 108.416 0.0000282862 107.357 0.000028101L69.8901 0.00002155C57.6202 0.0000194047 42.6613 3.90392 30.0048 14.6158C15.9247 26.5325 8.00001 44.132 8.00001 64C8.00001 83.868 15.9247 101.467 30.0048 113.384C42.6613 124.096 57.6202 128 69.8901 128L107.357 128Z" fill="#3BD3FD"></path>
+        <path fill-rule="evenodd" clip-rule="evenodd" d="M109.276 106.198L109.276 21.8021L69.8911 21.8021C61.7869 21.8021 51.846 24.3919 43.5485 31.3374C34.5392 38.8786 29.0999 50.219 29.0999 63.9999C29.0999 77.7808 34.5392 89.1212 43.5484 96.6624C51.846 103.608 61.7869 106.198 69.8911 106.198L109.276 106.198Z" fill="#FE5D75"></path>
+        <path d="M109.274 42.901L69.8897 42.901C62.0127 42.901 50.1974 48.1757 50.1974 63.9999C50.1974 79.8241 62.0127 85.0988 69.8897 85.0988H109.274V42.901Z" fill="#FFCB00"></path>
+      </svg>
+      <h1>Pagination runner</h1>
+    </div>
     <div class="actions">
       <label style="min-width: 220px;">
         <span class="muted">Admin token</span>
@@ -369,8 +481,29 @@ export function renderApp(): string {
     </aside>
     <div class="stack">
       <section class="stack">
+        <div class="stepper" aria-label="Create runner progress">
+          <button class="step-button active" type="button" data-step-button="1">
+            <span class="step-index">1</span>
+            <span class="step-title"><strong>Endpoint</strong><span>Name and response shape</span></span>
+          </button>
+          <button class="step-button" type="button" data-step-button="2">
+            <span class="step-index">2</span>
+            <span class="step-title"><strong>Pagination</strong><span>How pages advance</span></span>
+          </button>
+          <button class="step-button" type="button" data-step-button="3">
+            <span class="step-index">3</span>
+            <span class="step-title"><strong>Auth and test</strong><span>Preview before saving</span></span>
+          </button>
+          <button class="step-button" type="button" data-step-button="4">
+            <span class="step-index">4</span>
+            <span class="step-title"><strong>Save and connect</strong><span>Generate Clay URL</span></span>
+          </button>
+        </div>
+      </section>
+
+      <section class="stack flow-section" data-flow-step="1">
         <div class="toolbar">
-          <h2>Configuration</h2>
+          <h2>Endpoint</h2>
           <span id="currentId" class="pill">Unsaved</span>
         </div>
         <div id="immutableNotice" class="locked-notice" hidden>This saved configuration is locked to protect live Clay workflows. Create a new runner for any changes.</div>
@@ -397,6 +530,17 @@ export function renderApp(): string {
             <span class="help">Array is easiest for Clay. Envelope adds metadata.</span>
           </label>
           <label>Max items<input id="maxItems" type="number" min="1" placeholder="Optional"><span class="help">Optional hard cap across all pages.</span></label>
+        </div>
+        <div class="step-actions">
+          <span class="help">Start with the API’s list endpoint and the path to the array you want Clay to receive.</span>
+          <button type="button" data-next-step="2">Continue</button>
+        </div>
+      </section>
+
+      <section class="stack flow-section" data-flow-step="2" hidden>
+        <div class="toolbar">
+          <h2>Pagination</h2>
+          <span class="pill">Step 2</span>
         </div>
         <div class="divider"></div>
         <div class="grid-3">
@@ -433,13 +577,15 @@ export function renderApp(): string {
           <label>Next cursor path<input id="nextCursorPath" value="meta.next_cursor"></label>
         </div>
         <label>Initial cursor<input id="initialCursor"></label>
-        <label>Clay query passthrough<input id="queryString" placeholder="filter[start_time]=2026-05-27T00:00:00Z"><span class="help">Test-only query params. In Clay, append these to the generated runner URL.</span></label>
-        <label>Body template<textarea id="bodyTemplate" spellcheck="false"></textarea><span class="help">Optional saved request body for POST, PUT, or PATCH runners.</span></label>
+        <div class="step-actions">
+          <button type="button" data-next-step="1">Back</button>
+          <button type="button" data-next-step="3">Continue</button>
+        </div>
       </section>
 
-      <section class="stack">
+      <section class="stack flow-section" data-flow-step="3" hidden>
         <div class="toolbar">
-          <h2>Headers</h2>
+          <h2>Auth and test</h2>
           <button id="addStaticHeader" type="button">Add static header</button>
         </div>
         <label>Pass-through headers<input id="passThroughHeaders" value="authorization,x-api-key,api-key"><span class="help">Header names accepted from Clay and forwarded upstream. Values are never stored.</span></label>
@@ -451,9 +597,19 @@ export function renderApp(): string {
         </div>
         <div id="credentialHeaders" class="stack"></div>
         <div class="callout">Do not add API tokens as static headers. Static headers are persisted for non-secret values such as content type or API version.</div>
+        <label>Clay query passthrough<input id="queryString" placeholder="filter[start_time]=2026-05-27T00:00:00Z or key=api-key"><span class="help">Test-only query params. Placeholder params such as <code>key</code> are substituted in memory and never stored.</span></label>
+        <label>Body template<textarea id="bodyTemplate" spellcheck="false"></textarea><span class="help">Optional saved request body for POST, PUT, or PATCH runners.</span></label>
+        <div class="actions">
+          <button id="testBtn" class="primary" type="button">Run test</button>
+        </div>
+        <pre id="output">{}</pre>
+        <div class="step-actions">
+          <button type="button" data-next-step="2">Back</button>
+          <button type="button" data-next-step="4">Continue</button>
+        </div>
       </section>
 
-      <section id="analyticsPanel" class="stack" hidden>
+      <section id="analyticsPanel" class="stack flow-section" data-flow-step="4" hidden>
         <div class="toolbar">
           <h2>Analytics</h2>
           <button id="analyticsRefreshBtn" type="button">Refresh analytics</button>
@@ -470,9 +626,13 @@ export function renderApp(): string {
         <div id="recentRuns" class="recent-runs"></div>
       </section>
 
-      <section class="stack">
+      <section class="stack flow-section" data-flow-step="4" hidden>
+        <div class="toolbar">
+          <h2>Save and connect</h2>
+          <span class="pill">Step 4</span>
+        </div>
+        <div class="callout">Saving creates a stable Clay URL. The configuration cannot be edited or deleted afterward, so use the test step until the output looks right.</div>
         <div class="actions">
-          <button id="testBtn" class="primary" type="button">Run test</button>
           <button id="saveBtn" type="button">Save runner</button>
         </div>
         <div id="status" class="status"></div>
@@ -483,12 +643,15 @@ export function renderApp(): string {
             <button id="copyBtn" type="button">Copy URL</button>
           </div>
         </div>
-        <pre id="output">{}</pre>
+        <div class="step-actions">
+          <button type="button" data-next-step="3">Back</button>
+          <span class="help">Use this URL in Clay HTTP Sourcing.</span>
+        </div>
       </section>
     </div>
   </main>
   <script>
-    const state = { id: null, locked: false };
+    const state = { id: null, locked: false, activeStep: 1 };
     const $ = (id) => document.getElementById(id);
     const configFieldIds = [
       "name", "method", "targetUrl", "resultPath", "responseMode", "maxItems",
@@ -551,6 +714,17 @@ export function renderApp(): string {
     function setStatus(message, ok = true) {
       $("status").textContent = message;
       $("status").className = "status " + (ok ? "ok" : "err");
+    }
+
+    function setActiveStep(step) {
+      state.activeStep = Number(step);
+      document.querySelectorAll("[data-step-button]").forEach((button) => {
+        button.classList.toggle("active", Number(button.dataset.stepButton) === state.activeStep);
+      });
+      document.querySelectorAll("[data-flow-step]").forEach((section) => {
+        const isActive = Number(section.dataset.flowStep) === state.activeStep;
+        section.hidden = section.id === "analyticsPanel" ? !(state.id && isActive) : !isActive;
+      });
     }
 
     function print(value) {
@@ -647,9 +821,9 @@ export function renderApp(): string {
       $("initialCursor").value = p.initialCursor || "";
       setHeaderRows("staticHeaders", config.staticHeaders || []);
       $("runUrl").hidden = !state.id;
-      $("analyticsPanel").hidden = !state.id;
       $("immutableNotice").hidden = !state.id;
       setEditorLocked(state.locked);
+      setActiveStep(state.id ? 4 : state.activeStep);
       if (!state.id) {
         renderAnalytics(null);
       }
@@ -872,7 +1046,14 @@ export function renderApp(): string {
       applyConfig(defaults);
       setHeaderRows("credentialHeaders", []);
       print({});
+      setActiveStep(1);
       setStatus("", true);
+    });
+    document.querySelectorAll("[data-step-button]").forEach((button) => {
+      button.addEventListener("click", () => setActiveStep(button.dataset.stepButton));
+    });
+    document.querySelectorAll("[data-next-step]").forEach((button) => {
+      button.addEventListener("click", () => setActiveStep(button.dataset.nextStep));
     });
     $("testBtn").addEventListener("click", () => runTest().catch((error) => setStatus(error.message, false)));
     $("saveBtn").addEventListener("click", () => saveRunner().catch((error) => setStatus(error.message, false)));
@@ -882,6 +1063,7 @@ export function renderApp(): string {
     });
 
     applyConfig(defaults);
+    setActiveStep(1);
     setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
     refreshList().catch((error) => setStatus(error.message, false));
   </script>
