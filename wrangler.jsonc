@@ -10,7 +10,7 @@
     {
       "binding": "DB",
       "database_name": "clay-pagination-runner-db",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "dd006cd1-aec6-4171-928d-66eb964c82bc",
       "migrations_dir": "migrations"
     }
   ],

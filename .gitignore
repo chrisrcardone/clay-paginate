@@ -1,6 +1,7 @@
 node_modules/
 .wrangler/
 .dev.vars
+.admin-token.local
 dist/
 coverage/
 screenshots/
