@@ -55,6 +55,22 @@ export function renderApp(basePath = ""): string {
       z-index: 4;
     }
     header svg { width: 22px; height: 22px; flex: none; }
+    header nav {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    a {
+      color: var(--action);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    a:hover { text-decoration: underline; }
+    header a {
+      color: var(--secondary);
+      font-size: 12px;
+    }
     h1 {
       margin: 0;
       font-size: 14px;
@@ -207,7 +223,7 @@ export function renderApp(basePath = ""): string {
     }
     .wizard-wrap {
       display: grid;
-      gap: 16px;
+      gap: 20px;
     }
     .progress {
       display: grid;
@@ -277,25 +293,25 @@ export function renderApp(basePath = ""): string {
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      padding: 14px 16px;
+      padding: 16px 18px;
       border-bottom: 0.5px solid var(--border-soft);
     }
     .panel-body {
       display: grid;
-      gap: 14px;
-      padding: 16px;
+      gap: 20px;
+      padding: 18px;
     }
     .section {
       display: grid;
-      gap: 12px;
-      padding: 14px;
+      gap: 16px;
+      padding: 18px;
       border: 0.5px solid var(--border-soft);
       border-radius: var(--radius-lg);
       background: var(--surface);
     }
     .pagination-group {
       display: grid;
-      gap: 10px;
+      gap: 14px;
     }
     .pagination-group[hidden] { display: none; }
     .section-title {
@@ -324,20 +340,64 @@ export function renderApp(basePath = ""): string {
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
+      gap: 14px;
     }
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 10px;
+      gap: 14px;
     }
     label {
       display: grid;
-      gap: 5px;
+      gap: 7px;
       min-width: 0;
       color: var(--content);
       font-size: 12px;
       font-weight: 600;
+    }
+    .label-row {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .help {
+      position: relative;
+      display: inline-grid;
+      place-items: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      border: 0.5px solid var(--border);
+      color: var(--secondary);
+      background: var(--surface-soft);
+      font-size: 11px;
+      font-weight: 700;
+      cursor: help;
+    }
+    .help::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 8px);
+      transform: translateX(-50%);
+      z-index: 8;
+      display: none;
+      width: min(280px, 70vw);
+      padding: 9px 10px;
+      border-radius: var(--radius-md);
+      background: var(--content);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(20, 24, 35, 0.18);
+      font-size: 12px;
+      line-height: 1.4;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .help:hover::after,
+    .help:focus::after {
+      display: block;
     }
     input, select, textarea {
       width: 100%;
@@ -419,6 +479,12 @@ export function renderApp(basePath = ""): string {
       gap: 8px;
       align-items: center;
     }
+    .link-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 14px;
+      align-items: center;
+    }
     .header-row {
       display: grid;
       grid-template-columns: minmax(120px, 1fr) minmax(160px, 2fr) 32px;
@@ -444,12 +510,52 @@ export function renderApp(basePath = ""): string {
       background: var(--yellow-soft);
       color: #594400;
     }
+    .error-card {
+      border-color: #ffc1cd;
+      background: var(--red-soft);
+      color: #81172d;
+      white-space: pre-wrap;
+    }
     .status {
       min-height: 20px;
       font-weight: 600;
     }
     .status.ok { color: var(--success); }
     .status.err { color: var(--danger); }
+    .loading-line {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--secondary);
+      font-size: 12px;
+      font-weight: 600;
+      min-height: 24px;
+    }
+    .loading-line[hidden] { display: none; }
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--action);
+      border-radius: 999px;
+      animation: spin 0.85s linear infinite;
+      flex: none;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    button.is-loading {
+      position: relative;
+    }
+    button.is-loading::before {
+      content: "";
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.55);
+      border-top-color: currentColor;
+      border-radius: 999px;
+      animation: spin 0.85s linear infinite;
+    }
     .url-box {
       display: grid;
       gap: 8px;
@@ -604,6 +710,11 @@ export function renderApp(basePath = ""): string {
       <path d="M109.274 42.901L69.8897 42.901C62.0127 42.901 50.1974 48.1757 50.1974 63.9999C50.1974 79.8241 62.0127 85.0988 69.8897 85.0988H109.274V42.901Z" fill="#FFCB00"></path>
     </svg>
     <h1>Pagination runner</h1>
+    <nav aria-label="Project links">
+      <a href="https://github.com/chrisrcardone/clay-paginate" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/index.ts" target="_blank" rel="noreferrer">Worker source</a>
+      <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/SKILL.md" target="_blank" rel="noreferrer">AI skill</a>
+    </nav>
   </header>
 
   <main>
@@ -616,12 +727,16 @@ export function renderApp(basePath = ""): string {
         <button id="newBtn" class="primary" type="button">Create New Runner</button>
       </div>
       <div id="listStatus" class="status"></div>
+      <div id="listLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading saved runners...</span></div>
       <div class="overview">
         <div class="overview-card"><div class="overview-icon">A</div><div><span>Active runners</span><strong id="overviewRunnerCount">0</strong></div></div>
         <div class="overview-card"><div class="overview-icon">R</div><div><span>Total calls</span><strong id="overviewTotalRuns">0</strong></div></div>
         <div class="overview-card"><div class="overview-icon">S</div><div><span>Clay calls</span><strong id="overviewClayRuns">0</strong></div></div>
       </div>
       <div id="savedList" class="runner-list"></div>
+      <div class="notice">
+        This project is open source for auditability. Review the <a href="https://github.com/chrisrcardone/clay-paginate" target="_blank" rel="noreferrer">GitHub repository</a>, <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/pagination.ts" target="_blank" rel="noreferrer">pagination engine</a>, or <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/SECURITY.md" target="_blank" rel="noreferrer">security notes</a>.
+      </div>
     </section>
 
     <section id="createView" class="app-view" hidden>
@@ -648,19 +763,23 @@ export function renderApp(basePath = ""): string {
         <div class="section step-panel" data-wizard-step="ai">
           <div class="section-title"><span class="step">AI</span><h3>AI setup helper</h3></div>
           <div class="section-copy">Use this when you have API docs but do not know which fields to enter. Generate a prompt, send it to Claude, ChatGPT, or another AI, then paste the returned JSON object back here. The app fills the values the AI provided and clears untouched defaults it did not provide.</div>
-          <div class="grid-2">
-            <label>API documentation URL<input id="docsUrl" placeholder="https://docs.example.com/api/list-endpoint"></label>
-            <label>What data do you want Clay to fetch?<input id="docsGoal" placeholder="Example: G2 buyer intent event stream for a date range"></label>
+          <div class="link-row">
+            <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/AI_CONFIG_GUIDE.md" target="_blank" rel="noreferrer">AI configuration guide</a>
+            <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/SKILL.md" target="_blank" rel="noreferrer">Skill file for AI tools</a>
           </div>
-          <label>Documentation file<input id="docsFile" type="file" accept=".txt,.md,.json,.yaml,.yml,.html,.htm,.csv"></label>
-          <label>Paste docs excerpt or notes<textarea id="docsExcerpt" class="tall" spellcheck="false" placeholder="Optional. Paste the pagination section, endpoint example response, auth notes, or copied file text here."></textarea></label>
+          <div class="grid-2">
+            <label><span class="label-row">API documentation URL <span class="help" tabindex="0" data-tooltip="Paste the public docs page for the exact endpoint. The generated AI prompt will ask the AI to read this before returning values.">?</span></span><input id="docsUrl" placeholder="https://docs.example.com/api/list-endpoint"></label>
+            <label><span class="label-row">What data do you want Clay to fetch? <span class="help" tabindex="0" data-tooltip="Describe the result you expect in business language so the AI can choose the right endpoint and avoid nearby but incorrect APIs.">?</span></span><input id="docsGoal" placeholder="Example: G2 buyer intent event stream for a date range"></label>
+          </div>
+          <label><span class="label-row">Documentation file <span class="help" tabindex="0" data-tooltip="Optional. Upload copied docs text when the docs are private, blocked, or easier to provide as a file. The file is read locally into the prompt area only.">?</span></span><input id="docsFile" type="file" accept=".txt,.md,.json,.yaml,.yml,.html,.htm,.csv"></label>
+          <label><span class="label-row">Paste docs excerpt or notes <span class="help" tabindex="0" data-tooltip="Paste endpoint examples, pagination notes, auth requirements, and sample responses here. More specific excerpts produce better AI output.">?</span></span><textarea id="docsExcerpt" class="tall" spellcheck="false" placeholder="Optional. Paste the pagination section, endpoint example response, auth notes, or copied file text here."></textarea></label>
           <div class="actions">
             <button id="generatePromptBtn" class="primary" type="button">Generate AI prompt</button>
             <button id="copyPromptBtn" type="button">Copy prompt</button>
             <span id="promptStatus" class="hint"></span>
           </div>
-          <label>Prompt to paste into AI<textarea id="aiPrompt" class="prompt-box" readonly spellcheck="false"></textarea></label>
-          <label>Paste AI object<textarea id="aiObjectPaste" class="object-box" spellcheck="false" placeholder='Paste the full JSON object returned by the AI here'></textarea></label>
+          <label><span class="label-row">Prompt to paste into AI <span class="help" tabindex="0" data-tooltip="Copy this prompt into Claude, ChatGPT, or another AI. The linked GitHub guide gives the AI the current schema and safety rules.">?</span></span><textarea id="aiPrompt" class="prompt-box" readonly spellcheck="false"></textarea></label>
+          <label><span class="label-row">Paste AI object <span class="help" tabindex="0" data-tooltip="Paste the strict JSON object returned by the AI. Values the AI does not provide are cleared if they are still starter defaults.">?</span></span><textarea id="aiObjectPaste" class="object-box" spellcheck="false" placeholder='Paste the full JSON object returned by the AI here'></textarea></label>
           <div class="actions">
             <button id="applyAiObjectBtn" type="button">Apply AI object</button>
             <button id="clearAiObjectBtn" type="button">Clear object</button>
@@ -677,19 +796,19 @@ export function renderApp(basePath = ""): string {
           <div class="section-title"><span class="step">1</span><h3>Endpoint</h3></div>
           <div class="section-copy">Enter the upstream API endpoint exactly as the API expects it. If a credential must live in the URL, use a placeholder such as <code>{{key}}</code>; Clay will pass the value on the generated runner URL at run time.</div>
           <div class="grid-2">
-            <label>Name <span class="required">required</span><input id="name" value="G2 Buyer Stream v2 API"></label>
-            <label>Method
+            <label><span class="label-row">Name <span class="required">required</span> <span class="help" tabindex="0" data-tooltip="A stable human-readable name for this saved runner. It cannot be changed after saving.">?</span></span><input id="name" value="G2 Buyer Stream v2 API"></label>
+            <label><span class="label-row">Method <span class="help" tabindex="0" data-tooltip="The HTTP method used when calling the upstream API. Clay will always call this Worker URL, and the Worker uses this method upstream.">?</span></span>
               <select id="method"><option value="">Select method</option><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option></select>
             </label>
           </div>
-          <label>Target URL <span class="required">required</span><input id="targetUrl" value="https://data.g2.com/api/v1/ahoy/remote-event-streams"></label>
+          <label><span class="label-row">Target URL <span class="required">required</span> <span class="help" tabindex="0" data-tooltip="The exact upstream endpoint to paginate. Use {{key}} placeholders for URL credentials so secrets are supplied at runtime and never saved.">?</span></span><input id="targetUrl" value="https://data.g2.com/api/v1/ahoy/remote-event-streams"></label>
           <div class="hint">For URL keys, use placeholders like <code>https://api.com/call?api={{key}}</code>. Clay will call <code>${runPathExample}?key=...</code>.</div>
           <div class="grid-3">
-            <label>Results path <span class="required">required</span><input id="resultPath" value="data"></label>
-            <label>Response
+            <label><span class="label-row">Results path <span class="required">required</span> <span class="help" tabindex="0" data-tooltip="JSON path to the array of records in each response page, such as data, results, items, records, or products.">?</span></span><input id="resultPath" value="data"></label>
+            <label><span class="label-row">Response <span class="help" tabindex="0" data-tooltip="Array returns only the combined rows. Envelope returns data plus metadata such as page count and stop reason.">?</span></span>
               <select id="responseMode"><option value="">Select response</option><option value="array">Array</option><option value="envelope">Envelope</option></select>
             </label>
-            <label>Max items<input id="maxItems" type="number" min="1" placeholder="Optional"></label>
+            <label><span class="label-row">Max items <span class="help" tabindex="0" data-tooltip="Optional hard cap for returned rows. Leave blank when Clay should receive every result available from the paginated endpoint.">?</span></span><input id="maxItems" type="number" min="1" placeholder="Optional"></label>
           </div>
         </div>
 
@@ -697,7 +816,7 @@ export function renderApp(basePath = ""): string {
           <div class="section-title"><span class="step">2</span><h3>Pagination</h3></div>
           <div class="section-copy">Choose the pagination style from the API docs. Max pages is a safety cap, not the number of pages to fetch; the runner stops automatically when the API has no next page.</div>
           <div class="grid-3">
-            <label>Type
+            <label><span class="label-row">Type <span class="help" tabindex="0" data-tooltip="Select the pagination pattern shown in the API docs. Auto-detect can suggest this from one test response.">?</span></span>
               <select id="paginationType">
                 <option value="">Select type</option>
                 <option value="jsonapi">JSON next link</option>
@@ -708,36 +827,36 @@ export function renderApp(basePath = ""): string {
                 <option value="none">None</option>
               </select>
             </label>
-            <label>Max pages <span class="required">required</span><input id="maxPages" type="number" min="1" max="1000" value="250"></label>
-            <label>Page size<input id="pageSize" type="number" min="1" value="25"></label>
+            <label><span class="label-row">Max pages <span class="required">required</span> <span class="help" tabindex="0" data-tooltip="A runaway-loop safety cap. It should be high enough to fetch all pages; it does not force extra calls after pagination ends.">?</span></span><input id="maxPages" type="number" min="1" max="1000" value="250"></label>
+            <label><span class="label-row">Page size <span class="help" tabindex="0" data-tooltip="The number of records requested per page when the API supports it. Larger documented values usually reduce total API calls.">?</span></span><input id="pageSize" type="number" min="1" value="25"></label>
           </div>
           <div class="pagination-group" data-pagination-group="page">
             <div class="hint">Use this for APIs that paginate with page numbers. JSON next link also follows <code>links.next</code> when present.</div>
             <div class="grid-3">
-              <label>Page param<input id="pageParam" value="page[number]"></label>
-              <label>Page size param<input id="pageSizeParam" value="page[size]"></label>
-              <label>Start page<input id="startPage" type="number" min="1" value="1"></label>
+              <label><span class="label-row">Page param <span class="help" tabindex="0" data-tooltip="Query parameter used to request a specific page number, for example page or page[number].">?</span></span><input id="pageParam" value="page[number]"></label>
+              <label><span class="label-row">Page size param <span class="help" tabindex="0" data-tooltip="Query parameter used to request page size, for example per_page, limit, or page[size].">?</span></span><input id="pageSizeParam" value="page[size]"></label>
+              <label><span class="label-row">Start page <span class="help" tabindex="0" data-tooltip="First page number documented by the API. Most APIs start at 1; some start at 0.">?</span></span><input id="startPage" type="number" min="1" value="1"></label>
             </div>
             <div class="grid-2">
-              <label>Next link path<input id="nextLinkPath" value="links.next"></label>
-              <label>Total pages path<input id="totalPagesPath" value="meta.page_count"></label>
+              <label><span class="label-row">Next link path <span class="help" tabindex="0" data-tooltip="JSON path to the next page URL. For JSON:API this is commonly links.next.">?</span></span><input id="nextLinkPath" value="links.next"></label>
+              <label><span class="label-row">Total pages path <span class="help" tabindex="0" data-tooltip="Optional JSON path to total pages. The runner can also stop from next-link absence, empty pages, or other stop conditions.">?</span></span><input id="totalPagesPath" value="meta.page_count"></label>
             </div>
           </div>
           <div class="pagination-group" data-pagination-group="offset" hidden>
             <div class="hint">Use this for APIs that ask for an offset and limit.</div>
             <div class="grid-3">
-              <label>Offset param<input id="offsetParam" value="offset"></label>
-              <label>Limit param<input id="limitParam" value="limit"></label>
-              <label>Start offset<input id="startOffset" type="number" min="0" value="0"></label>
+              <label><span class="label-row">Offset param <span class="help" tabindex="0" data-tooltip="Query parameter that tells the API how many records to skip.">?</span></span><input id="offsetParam" value="offset"></label>
+              <label><span class="label-row">Limit param <span class="help" tabindex="0" data-tooltip="Query parameter that tells the API how many records to return per page.">?</span></span><input id="limitParam" value="limit"></label>
+              <label><span class="label-row">Start offset <span class="help" tabindex="0" data-tooltip="First offset value. Most offset APIs start at 0.">?</span></span><input id="startOffset" type="number" min="0" value="0"></label>
             </div>
           </div>
           <div class="pagination-group" data-pagination-group="cursor" hidden>
             <div class="hint">Use this for APIs that return a cursor for the next page.</div>
             <div class="grid-2">
-              <label>Cursor param<input id="cursorParam" value="cursor"></label>
-              <label>Next cursor path<input id="nextCursorPath" value="meta.next_cursor"></label>
+              <label><span class="label-row">Cursor param <span class="help" tabindex="0" data-tooltip="Query parameter used to send the next cursor back to the API.">?</span></span><input id="cursorParam" value="cursor"></label>
+              <label><span class="label-row">Next cursor path <span class="help" tabindex="0" data-tooltip="JSON path where the API returns the cursor for the following page.">?</span></span><input id="nextCursorPath" value="meta.next_cursor"></label>
             </div>
-            <label>Initial cursor<input id="initialCursor"></label>
+            <label><span class="label-row">Initial cursor <span class="help" tabindex="0" data-tooltip="Optional cursor for the first call. Leave blank unless the API docs require a starting cursor.">?</span></span><input id="initialCursor"></label>
           </div>
           <div class="pagination-group" data-pagination-group="linkHeader" hidden>
             <div class="hint">Use this for APIs that return the next page in the HTTP <code>Link</code> header.</div>
@@ -751,14 +870,14 @@ export function renderApp(basePath = ""): string {
           <div class="section-title"><span class="step">3</span><h3>Response shaping</h3></div>
           <div class="section-copy">Return the full item by default, flatten JSON:API attributes for easier Clay columns, or select only the fields Clay needs.</div>
           <div class="grid-2">
-            <label>Shape mode
+            <label><span class="label-row">Shape mode <span class="help" tabindex="0" data-tooltip="Choose how records are returned to Clay. Raw preserves each item, JSON:API attributes flattens attributes, and Select fields returns only mapped columns.">?</span></span>
               <select id="shapeMode">
                 <option value="raw">Full item</option>
                 <option value="jsonapiAttributes">Flatten JSON:API attributes</option>
                 <option value="select">Select fields</option>
               </select>
             </label>
-            <label>Selected fields<textarea id="shapeFields" spellcheck="false" placeholder="company:attributes.company_name&#10;score:attributes.score"></textarea></label>
+            <label><span class="label-row">Selected fields <span class="help" tabindex="0" data-tooltip="Only used in Select fields mode. Add one output column per line as output_name:path.to.value.">?</span></span><textarea id="shapeFields" spellcheck="false" placeholder="company:attributes.company_name&#10;score:attributes.score"></textarea></label>
           </div>
           <div class="hint">Use one field per line as <code>output_name:path.to.value</code>. Selected fields only applies when Shape mode is Select fields.</div>
         </div>
@@ -767,14 +886,14 @@ export function renderApp(basePath = ""): string {
           <div class="section-title"><span class="step">4</span><h3>Safety and rate controls</h3></div>
           <div class="section-copy">These controls prevent runaway loops and help with rate-limited APIs. The defaults stop on empty pages and repeated next links while still allowing full pagination.</div>
           <div class="grid-3">
-            <label>Delay between pages, ms<input id="delayMs" type="number" min="0" max="10000" value="0"></label>
-            <label>Retry attempts<input id="retryAttempts" type="number" min="0" max="5" value="2"></label>
-            <label>Timeout, ms<input id="timeoutMs" type="number" min="1000" max="55000" value="25000"></label>
+            <label><span class="label-row">Delay between pages, ms <span class="help" tabindex="0" data-tooltip="Optional pause between upstream page calls. Use when docs require rate limiting; too high can make Clay wait longer.">?</span></span><input id="delayMs" type="number" min="0" max="10000" value="0"></label>
+            <label><span class="label-row">Retry attempts <span class="help" tabindex="0" data-tooltip="Number of times to retry transient upstream failures such as 429 and 5xx responses.">?</span></span><input id="retryAttempts" type="number" min="0" max="5" value="2"></label>
+            <label><span class="label-row">Timeout, ms <span class="help" tabindex="0" data-tooltip="Maximum time to wait for each upstream page request before treating it as failed.">?</span></span><input id="timeoutMs" type="number" min="1000" max="55000" value="25000"></label>
           </div>
           <div class="grid-3">
-            <label>Retry statuses<input id="retryStatuses" value="408,429,500,502,503,504"></label>
-            <label>Max duration, ms<input id="maxDurationMs" type="number" min="1000" placeholder="Optional"></label>
-            <label>Max response bytes<input id="maxResponseBytes" type="number" min="1024" placeholder="Optional"></label>
+            <label><span class="label-row">Retry statuses <span class="help" tabindex="0" data-tooltip="Comma-separated upstream HTTP statuses that should be retried. Defaults cover timeouts, rate limits, and transient server errors.">?</span></span><input id="retryStatuses" value="408,429,500,502,503,504"></label>
+            <label><span class="label-row">Max duration, ms <span class="help" tabindex="0" data-tooltip="Optional total runtime cap for a full pagination run. Leave blank unless the upstream API is especially large or slow.">?</span></span><input id="maxDurationMs" type="number" min="1000" placeholder="Optional"></label>
+            <label><span class="label-row">Max response bytes <span class="help" tabindex="0" data-tooltip="Optional cap for the total response size processed during a run. This protects against unexpectedly huge responses.">?</span></span><input id="maxResponseBytes" type="number" min="1024" placeholder="Optional"></label>
           </div>
           <div class="grid-3">
             <label><input id="respectRetryAfter" type="checkbox" checked> Respect Retry-After</label>
@@ -794,25 +913,29 @@ export function renderApp(basePath = ""): string {
         <div class="section step-panel" data-wizard-step="test">
           <div class="section-title"><span class="step">5</span><h3>Auth and test</h3></div>
           <div class="section-copy">List only the header names Clay should forward at run time. Use test credentials here to verify the runner; test credentials and query values are not saved.</div>
-          <label>Pass-through headers<input id="passThroughHeaders" value="authorization,x-api-key,api-key"></label>
+          <label><span class="label-row">Pass-through headers <span class="help" tabindex="0" data-tooltip="Header names the Worker may forward from Clay to the upstream API. Only names are saved; values come from Clay at runtime.">?</span></span><input id="passThroughHeaders" value="authorization,x-api-key,api-key"></label>
           <div class="hint">Header values come from Clay at run time. They are never stored.</div>
           <div class="actions">
             <strong class="muted">Static headers</strong>
+            <span class="help" tabindex="0" data-tooltip="Static headers are saved and sent on every upstream request. Use only non-secret values like Accept or Content-Type.">?</span>
             <button id="addStaticHeader" type="button">Add static header</button>
           </div>
           <div id="staticHeaders"></div>
           <div class="actions">
             <strong class="muted">Test credentials</strong>
+            <span class="help" tabindex="0" data-tooltip="Temporary headers used only for this browser test. They are sent to the upstream API but never saved.">?</span>
             <button id="addCredentialHeader" type="button">Add test header</button>
           </div>
           <div id="credentialHeaders"></div>
-          <label>Test query params<input id="queryString" placeholder="filter[start_time]=2026-05-27T00:00:00Z or key=api-key"></label>
-          <label>Body template<textarea id="bodyTemplate" spellcheck="false"></textarea></label>
+          <label><span class="label-row">Test query params <span class="help" tabindex="0" data-tooltip="Temporary query params for this test only. Use this for URL placeholders such as key=temporary-test-key or filters needed by the endpoint.">?</span></span><input id="queryString" placeholder="filter[start_time]=2026-05-27T00:00:00Z or key=api-key"></label>
+          <label><span class="label-row">Body template <span class="help" tabindex="0" data-tooltip="Static request body for POST, PUT, or PATCH endpoints. Do not include credentials here.">?</span></span><textarea id="bodyTemplate" spellcheck="false"></textarea></label>
           <div class="actions">
             <button id="detectBtn" type="button">Auto-detect from first response</button>
             <button id="testBtn" class="primary" type="button">Run test</button>
             <span class="hint">Test credentials, query params, response rows, and traces are not saved.</span>
           </div>
+          <div id="testLoading" class="loading-line" hidden><span class="spinner"></span><span id="testLoadingText">Working...</span></div>
+          <div id="lastError" class="notice error-card" hidden></div>
           <div id="trace" class="trace"></div>
           <pre id="output">{}</pre>
           <div class="wizard-nav">
@@ -855,6 +978,7 @@ export function renderApp(basePath = ""): string {
         <button id="refreshBtn" type="button">Refresh</button>
       </div>
       <div id="detailStatus" class="status"></div>
+      <div id="detailLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading runner details...</span></div>
       <div class="detail-grid">
         <div class="detail-stack">
           <section class="panel">
@@ -865,6 +989,11 @@ export function renderApp(basePath = ""): string {
                 <div class="actions"><button id="detailCopyBtn" type="button">Copy URL</button><button id="detailCopySetupBtn" type="button">Copy Clay setup</button></div>
               </div>
               <div id="detailClaySetup" class="notice"></div>
+              <div class="link-row">
+                <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/index.ts" target="_blank" rel="noreferrer">Worker routes</a>
+                <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/pagination.ts" target="_blank" rel="noreferrer">Pagination logic</a>
+                <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/SECURITY.md" target="_blank" rel="noreferrer">Security model</a>
+              </div>
             </div>
           </section>
           <section class="panel">
@@ -893,6 +1022,7 @@ export function renderApp(basePath = ""): string {
             <button id="analyticsRefreshBtn" type="button">Refresh</button>
           </div>
           <div class="panel-body">
+            <div id="analyticsLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading analytics...</span></div>
             <div class="metrics">
               <div class="metric"><span>Total calls</span><strong id="metricTotalRuns">0</strong></div>
               <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
@@ -1003,18 +1133,94 @@ export function renderApp(basePath = ""): string {
         headers: { "content-type": "application/json", ...(options.headers || {}) }
       });
       const text = await response.text();
-      const body = text ? JSON.parse(text) : null;
-      if (!response.ok) throw new Error(body?.error || "Request failed");
+      let body = null;
+      try {
+        body = text ? JSON.parse(text) : null;
+      } catch {
+        body = text ? { rawBody: text } : null;
+      }
+      if (!response.ok) {
+        const error = new Error(body?.error || text || "Request failed");
+        error.status = response.status;
+        error.body = body;
+        error.receivedAt = new Date().toISOString();
+        throw error;
+      }
       return body;
     }
 
     function setStatus(message, ok = true) {
+      const text = message && !ok ? "[" + formatClock(new Date()) + "] " + message : message;
       ["status", "flowStatus", "listStatus", "detailStatus"].forEach((id) => {
         const element = $(id);
         if (!element) return;
-        element.textContent = message;
+        element.textContent = text;
         element.className = "status " + (ok ? "ok" : "err");
       });
+    }
+
+    function formatClock(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", second: "2-digit" });
+    }
+
+    function formatFullTimestamp(value) {
+      const date = value instanceof Date ? value : new Date(value);
+      return date.toLocaleString([], {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit"
+      });
+    }
+
+    function setLoadingLine(id, loading, message) {
+      const element = $(id);
+      if (!element) return;
+      if (message) {
+        const text = element.querySelector("span:last-child");
+        if (text) text.textContent = message;
+      }
+      element.hidden = !loading;
+    }
+
+    function setButtonBusy(id, busy, label) {
+      const button = $(id);
+      if (!button) return;
+      if (!button.dataset.defaultText) button.dataset.defaultText = button.textContent;
+      button.classList.toggle("is-loading", busy);
+      button.disabled = busy;
+      button.textContent = busy ? label : button.dataset.defaultText;
+    }
+
+    function clearLastError() {
+      const element = $("lastError");
+      if (!element) return;
+      element.hidden = true;
+      element.textContent = "";
+    }
+
+    function handleUiError(error, context, options = {}) {
+      const receivedAt = error?.receivedAt || new Date().toISOString();
+      const status = error?.status ? "HTTP " + error.status : "Worker error";
+      const body = error?.body;
+      const upstreamBody = body?.upstreamBody;
+      const message = error?.message || "Request failed";
+      const bodyText = upstreamBody
+        ? "\\n\\nUpstream body:\\n" + String(upstreamBody)
+        : body
+          ? "\\n\\nResponse body:\\n" + JSON.stringify(body, null, 2)
+          : "";
+      const full = context + " failed at " + formatFullTimestamp(receivedAt) + "\\n" + status + ": " + message + bodyText;
+
+      if (options.showLastError !== false) {
+        $("lastError").textContent = full;
+        $("lastError").hidden = false;
+      }
+      setStatus(context + " failed: " + message, false);
+      print({ error: message, context, receivedAt, status, response: body || null });
     }
 
     function updateUrlShape() {
@@ -1915,33 +2121,38 @@ export function renderApp(basePath = ""): string {
     }
 
     async function refreshList() {
-      const body = await api("/api/configs");
-      state.configs = body.configs || [];
-      renderListStats(state.configs);
-      const list = $("savedList");
-      list.innerHTML = "";
-      if (!state.configs.length) {
-        list.innerHTML = '<div class="panel"><div class="panel-body" style="text-align:center; padding:48px;"><h2>No runners yet</h2><div class="view-subtitle">Create your first API pagination runner to get started.</div><div class="actions" style="justify-content:center; margin-top:16px;"><button class="primary" type="button" id="emptyCreateBtn">Create New Runner</button></div></div></div>';
-        $("emptyCreateBtn").addEventListener("click", resetCreateFlow);
-        return;
+      setLoadingLine("listLoading", true, "Loading saved runners...");
+      try {
+        const body = await api("/api/configs");
+        state.configs = body.configs || [];
+        renderListStats(state.configs);
+        const list = $("savedList");
+        list.innerHTML = "";
+        if (!state.configs.length) {
+          list.innerHTML = '<div class="panel"><div class="panel-body" style="text-align:center; padding:48px;"><h2>No runners yet</h2><div class="view-subtitle">Create your first API pagination runner to get started.</div><div class="actions" style="justify-content:center; margin-top:16px;"><button class="primary" type="button" id="emptyCreateBtn">Create New Runner</button></div></div></div>';
+          $("emptyCreateBtn").addEventListener("click", resetCreateFlow);
+          return;
+        }
+        state.configs.forEach((config) => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "runner-card";
+          button.innerHTML = '<div><div class="runner-title"><strong></strong><span class="badge method"></span><span class="badge type"></span></div><div class="runner-url"></div><div class="runner-metrics"><div><span>Total calls</span><strong class="total"></strong></div><div><span>Clay calls</span><strong class="clay"></strong></div><div><span>Last run</span><strong class="last"></strong></div><div><span>Created</span><strong class="created"></strong></div><div><span>Runner ID</span><strong class="rid"></strong></div></div></div><div><span class="badge">View details</span></div>';
+          button.querySelector(".runner-title strong").textContent = config.name;
+          button.querySelector(".method").textContent = config.method;
+          button.querySelector(".type").textContent = config.paginationType || "runner";
+          button.querySelector(".runner-url").textContent = config.targetUrl;
+          button.querySelector(".total").textContent = config.totalCalls || 0;
+          button.querySelector(".clay").textContent = config.clayCalls || 0;
+          button.querySelector(".last").textContent = config.lastRunAt ? formatRelative(config.lastRunAt) : "Never";
+          button.querySelector(".created").textContent = formatRelative(config.createdAt);
+          button.querySelector(".rid").textContent = config.id.slice(0, 8);
+          button.addEventListener("click", () => openDetails(config.id).catch((error) => handleUiError(error, "Loading runner", { showLastError: false })));
+          list.appendChild(button);
+        });
+      } finally {
+        setLoadingLine("listLoading", false);
       }
-      state.configs.forEach((config) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "runner-card";
-        button.innerHTML = '<div><div class="runner-title"><strong></strong><span class="badge method"></span><span class="badge type"></span></div><div class="runner-url"></div><div class="runner-metrics"><div><span>Total calls</span><strong class="total"></strong></div><div><span>Clay calls</span><strong class="clay"></strong></div><div><span>Last run</span><strong class="last"></strong></div><div><span>Created</span><strong class="created"></strong></div><div><span>Runner ID</span><strong class="rid"></strong></div></div></div><div><span class="badge">View details</span></div>';
-        button.querySelector(".runner-title strong").textContent = config.name;
-        button.querySelector(".method").textContent = config.method;
-        button.querySelector(".type").textContent = config.paginationType || "runner";
-        button.querySelector(".runner-url").textContent = config.targetUrl;
-        button.querySelector(".total").textContent = config.totalCalls || 0;
-        button.querySelector(".clay").textContent = config.clayCalls || 0;
-        button.querySelector(".last").textContent = config.lastRunAt ? formatRelative(config.lastRunAt) : "Never";
-        button.querySelector(".created").textContent = formatRelative(config.createdAt);
-        button.querySelector(".rid").textContent = config.id.slice(0, 8);
-        button.addEventListener("click", () => openDetails(config.id).catch((error) => setStatus(error.message, false)));
-        list.appendChild(button);
-      });
     }
 
     function renderListStats(configs) {
@@ -1982,48 +2193,66 @@ export function renderApp(basePath = ""): string {
 
     async function runDetect() {
       requireFormReady();
+      clearLastError();
       setStatus("Detecting from first response...", true);
-      const body = await api("/api/detect", {
-        method: "POST",
-        body: JSON.stringify({
-          config: readConfig(),
-          credentialHeaders: readHeaderRows("credentialHeaders"),
-          queryString: $("queryString").value.trim()
-        })
-      });
-      const suggestions = body.detection.suggestions || {};
-      if (suggestions.resultPath) $("resultPath").value = suggestions.resultPath;
-      if (suggestions.pagination) {
-        const p = suggestions.pagination;
-        if (p.type) $("paginationType").value = p.type;
-        if (p.nextLinkPath) $("nextLinkPath").value = p.nextLinkPath;
-        if (p.totalPagesPath) $("totalPagesPath").value = p.totalPagesPath;
-        if (p.nextCursorPath) $("nextCursorPath").value = p.nextCursorPath;
+      setLoadingLine("testLoading", true, "Fetching the first page for auto-detect...");
+      setButtonBusy("detectBtn", true, "Detecting");
+      try {
+        const body = await api("/api/detect", {
+          method: "POST",
+          body: JSON.stringify({
+            config: readConfig(),
+            credentialHeaders: readHeaderRows("credentialHeaders"),
+            queryString: $("queryString").value.trim()
+          })
+        });
+        const suggestions = body.detection.suggestions || {};
+        if (suggestions.resultPath) $("resultPath").value = suggestions.resultPath;
+        if (suggestions.pagination) {
+          const p = suggestions.pagination;
+          if (p.type) $("paginationType").value = p.type;
+          if (p.nextLinkPath) $("nextLinkPath").value = p.nextLinkPath;
+          if (p.totalPagesPath) $("totalPagesPath").value = p.totalPagesPath;
+          if (p.nextCursorPath) $("nextCursorPath").value = p.nextCursorPath;
+        }
+        updatePaginationFields();
+        renderTrace([body.detection.page]);
+        print(body);
+        setStatus("Detected " + (body.detection.detected.paginationType || "unknown") + " pagination from the first response", true);
+        renderValidationWarnings();
+      } finally {
+        setButtonBusy("detectBtn", false);
+        setLoadingLine("testLoading", false);
       }
-      updatePaginationFields();
-      renderTrace([body.detection.page]);
-      print(body);
-      setStatus("Detected " + (body.detection.detected.paginationType || "unknown") + " pagination from the first response", true);
-      renderValidationWarnings();
     }
 
     async function runTest() {
       requireFormReady();
+      clearLastError();
+      state.lastTestOk = false;
+      $("testContinueBtn").disabled = true;
       setStatus("Testing...", true);
-      const body = await api("/api/test", {
-        method: "POST",
-        body: JSON.stringify({
-          config: readConfig(),
-          credentialHeaders: readHeaderRows("credentialHeaders"),
-          queryString: $("queryString").value.trim()
-        })
-      });
-      print(body);
-      renderTrace(body.pages);
-      state.lastTestOk = true;
-      $("testContinueBtn").disabled = false;
-      setStatus("Test returned " + body.itemCount + " items across " + body.pageCount + " page(s). Stop: " + body.stopReason, true);
-      if (state.id) await refreshAnalytics();
+      setLoadingLine("testLoading", true, "Running test and following pagination...");
+      setButtonBusy("testBtn", true, "Running test");
+      try {
+        const body = await api("/api/test", {
+          method: "POST",
+          body: JSON.stringify({
+            config: readConfig(),
+            credentialHeaders: readHeaderRows("credentialHeaders"),
+            queryString: $("queryString").value.trim()
+          })
+        });
+        print(body);
+        renderTrace(body.pages);
+        state.lastTestOk = true;
+        $("testContinueBtn").disabled = false;
+        setStatus("Test returned " + body.itemCount + " items across " + body.pageCount + " page(s). Stop: " + body.stopReason, true);
+        if (state.id) await refreshAnalytics();
+      } finally {
+        setButtonBusy("testBtn", false);
+        setLoadingLine("testLoading", false);
+      }
     }
 
     async function saveRunner() {
@@ -2035,18 +2264,25 @@ export function renderApp(basePath = ""): string {
         setWizardStep("test");
         return;
       }
+      clearLastError();
       setStatus("Saving...", true);
-      const body = await api("/api/configs", { method: "POST", body: JSON.stringify({ config: readConfig() }) });
-      state.id = body.config.id;
-      state.locked = true;
-      state.detailRunUrl = body.runUrl;
-      showRunUrl(body.runUrl);
-      renderClaySetup(body.runUrl, body.config);
-      print(body);
-      setLocked(true);
-      setStatus("Saved", true);
-      await refreshList();
-      await openDetails(body.config.id);
+      setButtonBusy("saveBtn", true, "Saving");
+      try {
+        const body = await api("/api/configs", { method: "POST", body: JSON.stringify({ config: readConfig() }) });
+        state.id = body.config.id;
+        state.locked = true;
+        state.detailRunUrl = body.runUrl;
+        showRunUrl(body.runUrl);
+        renderClaySetup(body.runUrl, body.config);
+        print(body);
+        setLocked(true);
+        setStatus("Saved", true);
+        await refreshList();
+        await openDetails(body.config.id);
+      } finally {
+        setButtonBusy("saveBtn", false);
+        if (state.locked) setLocked(true);
+      }
     }
 
     function buildClaySetup(url, config = readConfig()) {
@@ -2071,23 +2307,29 @@ export function renderApp(basePath = ""): string {
     }
 
     async function openDetails(id) {
-      const detail = await api("/api/configs/" + id);
-      applyConfig(detail.config);
-      state.detailRunUrl = detail.runUrl;
-      $("detailName").textContent = detail.config.name;
-      $("detailMethod").textContent = detail.config.method;
-      $("detailPagination").textContent = detail.config.pagination?.type || "runner";
-      $("detailRunUrlText").textContent = detail.runUrl;
-      $("detailClaySetup").textContent = buildClaySetup(detail.runUrl, detail.config);
-      $("detailTargetUrl").textContent = detail.config.targetUrl;
-      $("detailMethodValue").textContent = detail.config.method;
-      $("detailResultPath").textContent = detail.config.resultPath;
-      $("detailResponseMode").textContent = detail.config.responseMode;
-      $("detailMaxPages").textContent = detail.config.pagination?.maxPages || "";
-      $("detailPageSize").textContent = detail.config.pagination?.pageSize || "Not set";
-      $("detailShapeMode").textContent = detail.config.responseShape?.mode || "raw";
-      showView("details");
-      await refreshAnalytics();
+      const loadingId = state.view === "details" ? "detailLoading" : "listLoading";
+      setLoadingLine(loadingId, true, "Loading runner details...");
+      try {
+        const detail = await api("/api/configs/" + id);
+        applyConfig(detail.config);
+        state.detailRunUrl = detail.runUrl;
+        $("detailName").textContent = detail.config.name;
+        $("detailMethod").textContent = detail.config.method;
+        $("detailPagination").textContent = detail.config.pagination?.type || "runner";
+        $("detailRunUrlText").textContent = detail.runUrl;
+        $("detailClaySetup").textContent = buildClaySetup(detail.runUrl, detail.config);
+        $("detailTargetUrl").textContent = detail.config.targetUrl;
+        $("detailMethodValue").textContent = detail.config.method;
+        $("detailResultPath").textContent = detail.config.resultPath;
+        $("detailResponseMode").textContent = detail.config.responseMode;
+        $("detailMaxPages").textContent = detail.config.pagination?.maxPages || "";
+        $("detailPageSize").textContent = detail.config.pagination?.pageSize || "Not set";
+        $("detailShapeMode").textContent = detail.config.responseShape?.mode || "raw";
+        showView("details");
+        await refreshAnalytics();
+      } finally {
+        setLoadingLine(loadingId, false);
+      }
     }
 
     async function refreshAnalytics() {
@@ -2095,8 +2337,14 @@ export function renderApp(basePath = ""): string {
         $("analyticsPanel").hidden = true;
         return;
       }
-      const body = await api("/api/configs/" + state.id + "/analytics");
-      renderAnalytics(body.analytics);
+      $("analyticsPanel").hidden = false;
+      setLoadingLine("analyticsLoading", true, "Loading analytics...");
+      try {
+        const body = await api("/api/configs/" + state.id + "/analytics");
+        renderAnalytics(body.analytics);
+      } finally {
+        setLoadingLine("analyticsLoading", false);
+      }
     }
 
     function renderAnalytics(analytics) {
@@ -2198,11 +2446,11 @@ export function renderApp(basePath = ""): string {
     $("newBtn").addEventListener("click", resetCreateFlow);
     $("newBtnSecondary").addEventListener("click", resetCreateFlow);
     $("backToListBtn").addEventListener("click", () => {
-      refreshList().catch((error) => setStatus(error.message, false));
+      refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
       showView("list");
     });
     $("detailsBackBtn").addEventListener("click", () => {
-      refreshList().catch((error) => setStatus(error.message, false));
+      refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
       showView("list");
     });
     $("skipAiBtn").addEventListener("click", () => setWizardStep("configure"));
@@ -2229,15 +2477,15 @@ export function renderApp(basePath = ""): string {
     $("reviewBackBtn").addEventListener("click", () => setWizardStep("test"));
     $("refreshBtn").addEventListener("click", () => {
       const action = state.view === "details" && state.id ? openDetails(state.id) : refreshList();
-      action.catch((error) => setStatus(error.message, false));
+      action.catch((error) => handleUiError(error, "Refresh", { showLastError: state.view === "create" }));
     });
-    $("analyticsRefreshBtn").addEventListener("click", () => refreshAnalytics().catch((error) => setStatus(error.message, false)));
+    $("analyticsRefreshBtn").addEventListener("click", () => refreshAnalytics().catch((error) => handleUiError(error, "Loading analytics", { showLastError: false })));
     $("addStaticHeader").addEventListener("click", () => { addHeaderRow("staticHeaders"); markConfigDirty(); });
     $("addCredentialHeader").addEventListener("click", () => { addHeaderRow("credentialHeaders"); markConfigDirty(); });
     $("paginationType").addEventListener("change", () => { updatePaginationFields(); markConfigDirty(); });
-    $("detectBtn").addEventListener("click", () => runDetect().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
-    $("testBtn").addEventListener("click", () => runTest().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
-    $("saveBtn").addEventListener("click", () => saveRunner().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
+    $("detectBtn").addEventListener("click", () => runDetect().catch((error) => handleUiError(error, "Auto-detect")));
+    $("testBtn").addEventListener("click", () => runTest().catch((error) => handleUiError(error, "Test run")));
+    $("saveBtn").addEventListener("click", () => saveRunner().catch((error) => handleUiError(error, "Saving runner")));
     $("copyBtn").addEventListener("click", async () => {
       await navigator.clipboard.writeText($("runUrlText").textContent);
       setStatus("Copied", true);
@@ -2282,7 +2530,7 @@ export function renderApp(basePath = ""): string {
     applyConfig(defaults);
     setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
     updateUrlShape();
-    refreshList().catch((error) => setStatus(error.message, false));
+    refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
   </script>
 </body>
 </html>`;
