@@ -17,6 +17,14 @@ const baseConfig: RunnerConfig = {
   },
 };
 
+// Production runner ids are UUIDv4; the run path now validates the shape before
+// any D1 read, so run-path tests must use a real UUID.
+const RUNNER_ID = "11111111-1111-4111-8111-111111111111";
+
+function rateLimit(success: boolean): RateLimit {
+  return { limit: async () => ({ success }) } as unknown as RateLimit;
+}
+
 const env = (overrides: Partial<Env> = {}): Env => ({
   DB: dbWithConfig(null),
   ADMIN_TOKEN: "admin-secret",
@@ -42,6 +50,21 @@ function dbWithConfig(config: RunnerConfig | null, tokenRowInput: Record<string,
     prepare: (sql: string) => ({
       bind: (...args: unknown[]) => ({
         first: async () => {
+          if (sql.includes("LEFT JOIN runner_tokens")) {
+            if (!configRow) return null;
+            return {
+              c_id: configRow.id,
+              c_config_json: configRow.config_json,
+              t_config_id: tokenRow ? (tokenRow.config_id ?? configRow.id) : null,
+              t_token_hash: tokenRow?.token_hash ?? null,
+              t_token_ciphertext: tokenRow?.token_ciphertext ?? null,
+              t_token_iv: tokenRow?.token_iv ?? null,
+              t_created_at: tokenRow?.created_at ?? null,
+              t_updated_at: tokenRow?.updated_at ?? null,
+              t_rotated_at: tokenRow?.rotated_at ?? null,
+              t_emailed_at: tokenRow?.emailed_at ?? null,
+            };
+          }
           if (sql.includes("FROM configs")) return configRow;
           if (sql.includes("FROM runner_tokens")) return tokenRow;
           return null;
@@ -226,9 +249,59 @@ describe("security controls", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects requests to non-allowed hosts (no workers.dev bypass)", async () => {
+    const response = await worker.fetch(
+      new Request("https://clay-pagination-runner.example.workers.dev/api/configs", {
+        headers: { "x-admin-token": "admin-secret" },
+      }),
+      env(),
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it("rejects non-UUID runner ids before any D1 read", async () => {
+    const exploding = { prepare: () => { throw new Error("D1 must not be touched"); } } as unknown as D1Database;
+    const response = await worker.fetch(request("/not-a-uuid"), env({ DB: exploding }));
+
+    expect(response.status).toBe(404);
+  });
+
+  it("rate limits run requests before reading D1", async () => {
+    const exploding = { prepare: () => { throw new Error("D1 must not be touched"); } } as unknown as D1Database;
+    const response = await worker.fetch(
+      request(`/${RUNNER_ID}`, { headers: { "cf-connecting-ip": "198.51.100.10" } }),
+      env({ DB: exploding, RUN_RL: rateLimit(false) }),
+    );
+
+    expect(response.status).toBe(429);
+  });
+
+  it("rate limits repeated failed admin authentication", async () => {
+    const response = await worker.fetch(
+      request("/api/configs", { headers: { "x-admin-token": "wrong-token" } }),
+      env({ ADMIN_RL: rateLimit(false) }),
+    );
+
+    expect(response.status).toBe(429);
+  });
+
+  it("rejects oversized run request bodies", async () => {
+    const response = await worker.fetch(
+      request(`/${RUNNER_ID}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "content-length": "2000000" },
+        body: "{}",
+      }),
+      env(),
+    );
+
+    expect(response.status).toBe(413);
+  });
+
   it("can restrict public runner execution to configured caller CIDRs", async () => {
     const response = await worker.fetch(
-      request("/runner-id", {
+      request(`/${RUNNER_ID}`, {
         headers: { "cf-connecting-ip": "198.51.100.10" },
       }),
       env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }), ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
@@ -239,7 +312,7 @@ describe("security controls", () => {
 
   it("allows runner execution with a dedicated runner token when CIDR does not match", async () => {
     const response = await worker.fetch(
-      request("/runner-id", {
+      request(`/${RUNNER_ID}`, {
         headers: {
           "cf-connecting-ip": "198.51.100.10",
           "x-clay-paginate-token": "runner-secret",
@@ -257,7 +330,7 @@ describe("security controls", () => {
 
   it("requires the runner token when token auth is configured without a CIDR gate", async () => {
     const response = await worker.fetch(
-      request("/runner-id", {
+      request(`/${RUNNER_ID}`, {
         headers: { "cf-connecting-ip": "198.51.100.10" },
       }),
       env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }), RUNNER_AUTH_TOKEN: "runner-secret" }),
@@ -269,7 +342,7 @@ describe("security controls", () => {
   it("prefers per-runner tokens over the legacy global runner token", async () => {
     const encrypted = await encryptRunnerToken("runner-specific", "test-encryption-key");
     const response = await worker.fetch(
-      request("/runner-id", {
+      request(`/${RUNNER_ID}`, {
         headers: { "x-clay-paginate-token": "global-secret" },
       }),
       env({
@@ -416,7 +489,7 @@ describe("security controls", () => {
 
   it("does not trust spoofable x-forwarded-for for public runner CIDR checks", async () => {
     const response = await worker.fetch(
-      request("/runner-id", {
+      request(`/${RUNNER_ID}`, {
         headers: { "x-forwarded-for": "203.0.113.10" },
       }),
       env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }), ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),

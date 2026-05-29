@@ -111,6 +111,74 @@ export async function getConfig(db: D1Database, id: string): Promise<RunnerConfi
   } as RunnerConfig;
 }
 
+// Fetch the config and its (optional) runner token in a single D1 read. The run
+// path is unauthenticated by design, so collapsing the two lookups into one
+// query halves the per-request D1 reads an attacker can force.
+export async function getConfigWithToken(
+  db: D1Database,
+  id: string,
+): Promise<{ config: RunnerConfig | null; tokenRecord: RunnerTokenRecord | null }> {
+  const row = await db
+    .prepare(
+      `SELECT c.id AS c_id,
+              c.config_json AS c_config_json,
+              t.config_id AS t_config_id,
+              t.token_hash AS t_token_hash,
+              t.token_ciphertext AS t_token_ciphertext,
+              t.token_iv AS t_token_iv,
+              t.created_at AS t_created_at,
+              t.updated_at AS t_updated_at,
+              t.rotated_at AS t_rotated_at,
+              t.emailed_at AS t_emailed_at
+       FROM configs c
+       LEFT JOIN runner_tokens t ON t.config_id = c.id
+       WHERE c.id = ?`,
+    )
+    .bind(id)
+    .first<{
+      c_id: string;
+      c_config_json: string;
+      t_config_id: string | null;
+      t_token_hash: string | null;
+      t_token_ciphertext: string | null;
+      t_token_iv: string | null;
+      t_created_at: string | null;
+      t_updated_at: string | null;
+      t_rotated_at: string | null;
+      t_emailed_at: string | null;
+    }>();
+
+  if (!row) {
+    return { config: null, tokenRecord: null };
+  }
+
+  const config = { ...JSON.parse(row.c_config_json), id: row.c_id } as RunnerConfig;
+  const tokenRecord: RunnerTokenRecord | null = row.t_config_id
+    ? {
+      configId: row.t_config_id,
+      tokenHash: row.t_token_hash ?? "",
+      tokenCiphertext: row.t_token_ciphertext ?? "",
+      tokenIv: row.t_token_iv ?? "",
+      createdAt: row.t_created_at ?? "",
+      updatedAt: row.t_updated_at ?? "",
+      rotatedAt: row.t_rotated_at,
+      emailedAt: row.t_emailed_at,
+    }
+    : null;
+
+  return { config, tokenRecord };
+}
+
+// Bounded retention for run_logs so a flood of (rate-limited) runs cannot grow
+// the table without limit. Invoked from the scheduled() cron handler.
+export async function pruneRunLogs(db: D1Database, retentionDays = 90): Promise<number> {
+  const result = await db
+    .prepare(`DELETE FROM run_logs WHERE created_at < datetime('now', ?)`)
+    .bind(`-${Math.max(1, Math.floor(retentionDays))} days`)
+    .run();
+  return Number(result.meta?.changes ?? 0);
+}
+
 export async function getRunnerTokenRecord(db: D1Database, configId: string): Promise<RunnerTokenRecord | null> {
   const row = await db
     .prepare("SELECT * FROM runner_tokens WHERE config_id = ?")

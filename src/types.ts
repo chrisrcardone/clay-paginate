@@ -6,6 +6,11 @@ export interface Env {
   RUNNER_TOKEN_ENCRYPTION_KEY?: string;
   ALLOWED_RUN_CIDRS?: string;
   ALLOWED_UPSTREAM_HOSTS?: string;
+  // Optional Cloudflare bindings. Feature-detected at runtime so the Worker
+  // still functions (without that protection) if a binding is not configured.
+  RUN_RL?: RateLimit;
+  ADMIN_RL?: RateLimit;
+  RUN_METRICS?: AnalyticsEngineDataset;
 }
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH";

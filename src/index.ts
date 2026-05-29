@@ -14,12 +14,14 @@ import {
   addRunnerUsageNote,
   getAnalytics,
   getConfig,
+  getConfigWithToken,
   getRunnerTokenRecord,
   getRunnerTokenStatus,
   listRunnerUsageNotes,
   listConfigs,
   logRun,
   markRunnerTokenEmailed,
+  pruneRunLogs,
   saveConfig,
   upsertRunnerToken,
 } from "./storage";
@@ -46,10 +48,19 @@ const LEGACY_BASE_PATH = "/paginate";
 const RUNNER_AUTH_HEADERS = ["x-clay-paginate-token", "x-runner-token"];
 const RUNNER_TOKEN_CONFIRMATION = "REGENERATE RUNNER TOKEN";
 const TOKEN_EMAIL_FROM = "no-reply@chris-apis.xyz";
+// Only serve the production custom domain (plus local dev). This holds even if
+// workers.dev / preview URLs get re-enabled, so edge protections cannot be
+// bypassed by hitting an alternate hostname.
+const ALLOWED_HOSTS = new Set(["paginate.chris-apis.xyz", "localhost", "127.0.0.1"]);
+const RUNNER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_RUN_BODY_BYTES = 1_000_000;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
+    if (!isAllowedHost(url.hostname)) {
+      return new Response("Not found", { status: 404, headers: { "cache-control": "no-store" } });
+    }
     const route = getRoute(url);
 
     if (request.method === "OPTIONS") {
@@ -66,63 +77,63 @@ export default {
       }
 
       if (route.appPath === "/api/test" && request.method === "POST") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleTest(request, env);
       }
 
       if (route.appPath === "/api/detect" && request.method === "POST") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleDetect(request, env);
       }
 
       if (route.appPath === "/api/configs" && request.method === "GET") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         const configs = await listConfigs(env.DB, route.publicBaseUrl(url.origin));
         return json({ configs });
       }
 
       if (route.appPath === "/api/configs" && request.method === "POST") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleSave(request, env, route.publicBaseUrl(url.origin));
       }
 
       const configMatch = route.appPath.match(/^\/api\/configs\/([^/]+)$/);
       if (configMatch && request.method === "GET") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleGet(env, configMatch[1], route.publicBaseUrl(url.origin));
       }
 
       if (configMatch && request.method === "DELETE") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return json({ error: "Saved configurations are immutable and cannot be deleted" }, 405);
       }
 
       const analyticsMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/analytics$/);
       if (analyticsMatch && request.method === "GET") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleAnalytics(env, analyticsMatch[1]);
       }
 
       const usageMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/usage-notes$/);
       if (usageMatch && request.method === "GET") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleListUsageNotes(env, usageMatch[1]);
       }
 
       if (usageMatch && request.method === "POST") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleAddUsageNote(request, env, usageMatch[1]);
       }
 
       const tokenEmailMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/runner-token\/email$/);
       if (tokenEmailMatch && request.method === "POST") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleEmailRunnerToken(request, env, tokenEmailMatch[1], route.publicBaseUrl(url.origin));
       }
 
       const tokenRegenerateMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/runner-token\/regenerate$/);
       if (tokenRegenerateMatch && request.method === "POST") {
-        requireAdmin(request, env);
+        await requireAdmin(request, env);
         return await handleRegenerateRunnerToken(request, env, tokenRegenerateMatch[1], route.publicBaseUrl(url.origin));
       }
 
@@ -137,6 +148,11 @@ export default {
     } catch (error) {
       return handleError(error);
     }
+  },
+
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+    // Daily retention so run_logs cannot grow without bound under sustained load.
+    ctx.waitUntil(pruneRunLogs(env.DB));
   },
 };
 
@@ -186,18 +202,36 @@ function isReadMethod(method: string): boolean {
   return method === "GET" || method === "HEAD";
 }
 
-function requireAdmin(request: Request, env: Env): void {
-  if (!hasValidAdminToken(request, env)) {
-    if (!env.ADMIN_TOKEN) {
-      throw new HttpError(503, "Admin API is not configured");
-    }
-    throw new HttpError(401, "Unauthorized");
-  }
+function isAllowedHost(hostname: string): boolean {
+  return ALLOWED_HOSTS.has(hostname.toLowerCase());
 }
 
-async function assertRunCallerAllowed(request: Request, env: Env, configId: string): Promise<void> {
+async function requireAdmin(request: Request, env: Env): Promise<void> {
+  if (hasValidAdminToken(request, env)) {
+    return;
+  }
+
+  // Only failed/missing-token attempts are counted, so a valid operator is never
+  // throttled while online brute-forcing of ADMIN_TOKEN is rate-limited per IP.
+  if (env.ADMIN_RL) {
+    const { success } = await env.ADMIN_RL.limit({ key: getClientIp(request) ?? "unknown" });
+    if (!success) {
+      throw new HttpError(429, "Too many authentication attempts. Try again shortly.");
+    }
+  }
+
+  if (!env.ADMIN_TOKEN) {
+    throw new HttpError(503, "Admin API is not configured");
+  }
+  throw new HttpError(401, "Unauthorized");
+}
+
+async function assertRunCallerAllowed(
+  request: Request,
+  env: Env,
+  runnerToken: Awaited<ReturnType<typeof getRunnerTokenRecord>>,
+): Promise<void> {
   const hasRunCidrGate = Boolean(env.ALLOWED_RUN_CIDRS?.trim());
-  const runnerToken = await getRunnerTokenRecord(env.DB, configId);
   const hasRunTokenGate = Boolean(runnerToken || env.RUNNER_AUTH_TOKEN);
 
   if (!hasRunCidrGate && !hasRunTokenGate) {
@@ -249,6 +283,40 @@ function constantTimeEqual(left: string, right: string): boolean {
 
 function getClientIp(request: Request): string | null {
   return request.headers.get("cf-connecting-ip");
+}
+
+// Best-effort, high-volume run metrics to Analytics Engine. This is the durable,
+// write-cheap metrics sink; it never blocks or fails a run if the binding is
+// absent or errors. D1 run_logs remains the source for the analytics UI.
+function recordRunMetric(
+  env: Env,
+  input: {
+    configId: string;
+    mode: "run" | "test";
+    status: "ok" | "error";
+    pageCount?: number;
+    itemCount?: number;
+    durationMs?: number;
+    upstreamStatus?: number;
+    stopReason?: string;
+    errorCode?: string;
+  },
+): void {
+  if (!env.RUN_METRICS) return;
+  try {
+    env.RUN_METRICS.writeDataPoint({
+      indexes: [input.configId],
+      blobs: [input.mode, input.status, input.stopReason ?? "", input.errorCode ?? ""],
+      doubles: [
+        input.pageCount ?? 0,
+        input.itemCount ?? 0,
+        input.durationMs ?? 0,
+        input.upstreamStatus ?? 0,
+      ],
+    });
+  } catch {
+    // Metrics are best-effort and must never fail a run.
+  }
 }
 
 async function handleTest(request: Request, env: Env): Promise<Response> {
@@ -366,11 +434,35 @@ async function handleAddUsageNote(request: Request, env: Env, id: string): Promi
 }
 
 async function handleRun(request: Request, env: Env, id: string): Promise<Response> {
-  const config = await getConfig(env.DB, id);
+  // Reject anything that is not a real runner id before touching D1. This drops
+  // scanner/bot traffic (favicon.ico, etc.) hitting the catch-all run route and
+  // shrinks the unauthenticated D1-read surface to plausibly-valid ids only.
+  if (!RUNNER_ID_PATTERN.test(id)) {
+    return json({ error: "Config not found" }, 404);
+  }
+
+  // Per-caller rate limit, applied before any D1 read so a flood cannot exhaust
+  // D1 quota / Worker invocations or hammer upstream APIs through this Worker.
+  if (env.RUN_RL) {
+    const { success } = await env.RUN_RL.limit({ key: getClientIp(request) ?? "unknown" });
+    if (!success) {
+      return json({ error: "Rate limit exceeded. Slow down and retry shortly." }, 429);
+    }
+  }
+
+  // Reject oversized bodies up front so a large POST cannot pressure isolate memory.
+  if (request.method === "POST") {
+    const declaredLength = Number(request.headers.get("content-length") ?? "0");
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_RUN_BODY_BYTES) {
+      return json({ error: "Request body too large" }, 413);
+    }
+  }
+
+  const { config, tokenRecord } = await getConfigWithToken(env.DB, id);
   if (!config) {
     return json({ error: "Config not found" }, 404);
   }
-  await assertRunCallerAllowed(request, env, id);
+  await assertRunCallerAllowed(request, env, tokenRecord);
   validateConfigInput(config, env);
 
   const requestUrl = new URL(request.url);
@@ -395,6 +487,16 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
       stopReason: result.stopReason,
       retryCount: result.retryCount,
     });
+    recordRunMetric(env, {
+      configId: id,
+      mode: "run",
+      status: "ok",
+      pageCount: result.pages.length,
+      itemCount: result.items.length,
+      durationMs: result.durationMs,
+      upstreamStatus: result.upstreamStatus,
+      stopReason: result.stopReason,
+    });
 
     if (config.responseMode === "envelope") {
       return json({
@@ -418,6 +520,13 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
       status: "error",
       upstreamStatus: error instanceof UpstreamError ? error.status : undefined,
       error: getAnalyticsErrorCode(error),
+    });
+    recordRunMetric(env, {
+      configId: id,
+      mode: "run",
+      status: "error",
+      upstreamStatus: error instanceof UpstreamError ? error.status : undefined,
+      errorCode: getAnalyticsErrorCode(error),
     });
     throw error;
   }
