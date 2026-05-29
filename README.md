@@ -10,9 +10,18 @@ GitHub repo: `https://github.com/chrisrcardone/clay-paginate`
 
 ## AI-assisted setup
 
-The app includes an AI setup helper at the top of the form. Paste an API docs URL, upload or paste docs text, and copy the generated prompt into Claude, ChatGPT, or another AI. The prompt asks the AI to return one strict JSON object with runner values, field explanations, certainty, and warnings. Paste that object back into the app to fill the form.
+The app opens with saved runners sorted by Clay call volume. Create New Runner starts a four-step guided flow:
+
+1. AI Setup
+2. Configure
+3. Test
+4. Review & Save
+
+The AI Setup step accepts an API docs URL, uploaded or pasted docs text, and a user goal. Copy the generated prompt into Claude, ChatGPT, or another AI. The prompt asks the AI to return one strict JSON object with runner values, field explanations, certainty, and warnings. Paste that object back into the app to fill the form and move into Configure.
 
 When an AI object is applied, the app fills only the values the AI returned. Any untouched starter defaults that the AI did not return are cleared so users can see what still needs a confirmed value before testing or saving.
+
+The Test step can auto-detect pagination from one first response, then run a real temporary test with page-by-page debug trace. Test credentials, query params, traces, and response samples are never saved. Review & Save requires a successful test because saved runners are immutable.
 
 AI assistants can also use these repo files directly:
 
@@ -116,4 +125,4 @@ The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. G
 
 ## Clay usage
 
-Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs. After saving, use the in-app Clay setup copy block for the exact URL, auth headers, URL placeholder query params, and expected response shape.
+Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs. After saving, open the runner details screen for the Clay setup copy block, immutable configuration details, metadata-only analytics, and recent run summaries.

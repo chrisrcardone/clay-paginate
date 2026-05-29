@@ -96,7 +96,7 @@ function getRoute(url: URL): {
     return {
       appPath: "/",
       basePath: LEGACY_BASE_PATH,
-      publicBaseUrl: (origin) => `${origin}${LEGACY_BASE_PATH}`,
+      publicBaseUrl: (origin) => `${publicOrigin(origin)}${LEGACY_BASE_PATH}`,
     };
   }
 
@@ -104,15 +104,23 @@ function getRoute(url: URL): {
     return {
       appPath: pathname.slice(LEGACY_BASE_PATH.length),
       basePath: LEGACY_BASE_PATH,
-      publicBaseUrl: (origin) => `${origin}${LEGACY_BASE_PATH}`,
+      publicBaseUrl: (origin) => `${publicOrigin(origin)}${LEGACY_BASE_PATH}`,
     };
   }
 
   return {
     appPath: pathname,
     basePath: "",
-    publicBaseUrl: (origin) => origin,
+    publicBaseUrl: (origin) => publicOrigin(origin),
   };
+}
+
+function publicOrigin(origin: string): string {
+  const url = new URL(origin);
+  if (url.hostname === "paginate.chris-apis.xyz") {
+    url.protocol = "https:";
+  }
+  return url.origin;
 }
 
 function isReadMethod(method: string): boolean {

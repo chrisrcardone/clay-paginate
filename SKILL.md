@@ -13,6 +13,11 @@ Use this skill when a user asks an AI assistant to configure Clay Pagination Run
 7. Tell the user to test before saving.
 8. Treat `maxPages` as a full-run safety cap, usually 250 and up to 1000 for large result sets.
 9. Include production-safe stop conditions, retry/rate controls, and response shaping only when useful.
+10. Leave unconfirmed values blank or `null` so the app can clear starter defaults and show the user what still needs review.
+
+## App Flow
+
+The UI guides users through AI Setup, Configure, Test, and Review & Save. After the JSON object is pasted, the app applies the returned values, shows explanations and warnings, then moves to Configure. A saved runner cannot be edited or deleted.
 
 ## App URL
 

@@ -14,6 +14,17 @@ https://paginate.chris-apis.xyz/<config-id>
 
 Clay sends runtime credentials to that URL. The runner forwards only the configured pass-through headers and returns one combined array of all paginated results.
 
+## App Flow
+
+The user is walked through four steps:
+
+1. `AI Setup`: generate a prompt from docs and paste the returned JSON object.
+2. `Configure`: review endpoint, pagination, safety controls, rate limits, and response shaping.
+3. `Test`: add temporary credentials, optionally auto-detect from one first response, then run a real test with an ephemeral page trace.
+4. `Review & Save`: review warnings, save the immutable runner, and copy Clay setup instructions.
+
+Your JSON object should make step 2 easier, not pretend uncertain fields are known. If the docs do not confirm a value, return `null` or an empty string and explain the uncertainty. The app will clear untouched defaults so the user can see what still needs attention.
+
 ## Security Rules
 
 - Never invent credential values.

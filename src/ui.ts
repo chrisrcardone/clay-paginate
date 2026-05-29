@@ -74,12 +74,197 @@ export function renderApp(basePath = ""): string {
       letter-spacing: 0;
     }
     main {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) 360px;
-      gap: 12px;
-      padding: 12px;
-      max-width: 1360px;
+      padding: 0;
+    }
+    .app-view {
+      max-width: 1180px;
       margin: 0 auto;
+      padding: 24px;
+    }
+    .app-view[hidden] { display: none; }
+    .view-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 22px 0 18px;
+    }
+    .view-head h2 {
+      font-size: 24px;
+      line-height: 1.2;
+    }
+    .view-subtitle {
+      margin-top: 4px;
+      color: var(--secondary);
+      font-size: 14px;
+      font-weight: 500;
+    }
+    .overview {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      padding: 16px 0 22px;
+    }
+    .overview-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      padding: 16px;
+    }
+    .overview-icon {
+      display: grid;
+      place-items: center;
+      width: 36px;
+      height: 36px;
+      border-radius: 999px;
+      background: var(--blue-soft);
+      color: var(--action);
+      font-weight: 700;
+    }
+    .overview-card span,
+    .detail-label {
+      display: block;
+      color: var(--secondary);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .overview-card strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 22px;
+      font-weight: 600;
+    }
+    .runner-list {
+      display: grid;
+      gap: 12px;
+    }
+    .runner-card {
+      width: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: start;
+      text-align: left;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      padding: 18px;
+    }
+    .runner-card:hover:not(:disabled) {
+      background: var(--surface);
+      box-shadow: 0 6px 18px rgba(20, 24, 35, 0.08);
+    }
+    .runner-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .runner-title strong {
+      font-size: 16px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: var(--radius-sm);
+      padding: 2px 7px;
+      background: var(--surface-soft);
+      color: var(--secondary);
+      border: 0.5px solid var(--border-soft);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .runner-url {
+      margin: 10px 0 14px;
+      color: var(--secondary);
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+    .runner-metrics {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .runner-metrics span {
+      color: var(--secondary);
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .runner-metrics strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .wizard-wrap {
+      display: grid;
+      gap: 16px;
+    }
+    .progress {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+    }
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--secondary);
+      font-weight: 600;
+    }
+    .progress-step .step {
+      background: var(--surface-soft);
+      color: var(--secondary);
+    }
+    .progress-step.active {
+      color: var(--content);
+    }
+    .progress-step.active .step {
+      background: var(--content);
+      color: #fff;
+    }
+    .progress-step.complete .step {
+      background: var(--green-soft);
+      color: var(--success);
+    }
+    .step-panel[hidden] { display: none; }
+    .wizard-nav {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 2px;
+    }
+    .detail-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+    .detail-stack {
+      display: grid;
+      gap: 14px;
+    }
+    .detail-row {
+      display: grid;
+      gap: 5px;
+    }
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
     }
     .panel {
       background: var(--surface);
@@ -402,7 +587,10 @@ export function renderApp(basePath = ""): string {
       white-space: nowrap;
     }
     @media (max-width: 980px) {
-      main { grid-template-columns: 1fr; }
+      .app-view { padding: 14px; }
+      .view-head, .runner-card { grid-template-columns: 1fr; }
+      .view-head { display: grid; }
+      .overview, .runner-metrics, .progress, .detail-grid, .review-grid { grid-template-columns: 1fr; }
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .header-row { grid-template-columns: 1fr; }
     }
@@ -419,18 +607,45 @@ export function renderApp(basePath = ""): string {
   </header>
 
   <main>
-    <section class="panel">
-      <div class="panel-head">
+    <section id="listView" class="app-view">
+      <div class="view-head">
         <div>
-          <h2>Create runner</h2>
-          <div class="hint">Test first. Save once. Use the generated URL in Clay.</div>
+          <h2>API Pagination Runners</h2>
+          <div class="view-subtitle">Configure once, use everywhere. Runtime credentials stay in Clay.</div>
         </div>
-        <button id="newBtn" type="button">New runner</button>
+        <button id="newBtn" class="primary" type="button">Create New Runner</button>
       </div>
+      <div id="listStatus" class="status"></div>
+      <div class="overview">
+        <div class="overview-card"><div class="overview-icon">A</div><div><span>Active runners</span><strong id="overviewRunnerCount">0</strong></div></div>
+        <div class="overview-card"><div class="overview-icon">R</div><div><span>Total calls</span><strong id="overviewTotalRuns">0</strong></div></div>
+        <div class="overview-card"><div class="overview-icon">S</div><div><span>Clay calls</span><strong id="overviewClayRuns">0</strong></div></div>
+      </div>
+      <div id="savedList" class="runner-list"></div>
+    </section>
+
+    <section id="createView" class="app-view" hidden>
+      <div class="view-head">
+        <div>
+          <button id="backToListBtn" type="button">Back to List</button>
+          <h2>Create New Runner</h2>
+          <div id="createSubtitle" class="view-subtitle">Let AI help you configure from documentation.</div>
+        </div>
+        <button id="newBtnSecondary" type="button">Reset</button>
+      </div>
+      <div class="wizard-wrap">
+        <div class="progress">
+          <div class="progress-step" data-progress-step="ai"><span class="step">1</span><span>AI Setup</span></div>
+          <div class="progress-step" data-progress-step="configure"><span class="step">2</span><span>Configure</span></div>
+          <div class="progress-step" data-progress-step="test"><span class="step">3</span><span>Test</span></div>
+          <div class="progress-step" data-progress-step="review"><span class="step">4</span><span>Review & Save</span></div>
+        </div>
+        <div id="flowStatus" class="status"></div>
+    <section class="panel">
       <div class="panel-body">
         <div id="lockedNotice" class="notice locked" hidden>This runner is locked. Create a new runner for changes.</div>
 
-        <div class="section">
+        <div class="section step-panel" data-wizard-step="ai">
           <div class="section-title"><span class="step">AI</span><h3>AI setup helper</h3></div>
           <div class="section-copy">Use this when you have API docs but do not know which fields to enter. Generate a prompt, send it to Claude, ChatGPT, or another AI, then paste the returned JSON object back here. The app fills the values the AI provided and clears untouched defaults it did not provide.</div>
           <div class="grid-2">
@@ -452,9 +667,13 @@ export function renderApp(basePath = ""): string {
             <span id="aiObjectStatus" class="hint"></span>
           </div>
           <div id="aiObjectReview" class="notice ai-review" hidden></div>
+          <div class="wizard-nav">
+            <button id="skipAiBtn" type="button">Skip AI - Configure Manually</button>
+            <button id="aiContinueBtn" class="primary" type="button">Continue to Configure</button>
+          </div>
         </div>
 
-        <div class="section">
+        <div class="section step-panel" data-wizard-step="configure">
           <div class="section-title"><span class="step">1</span><h3>Endpoint</h3></div>
           <div class="section-copy">Enter the upstream API endpoint exactly as the API expects it. If a credential must live in the URL, use a placeholder such as <code>{{key}}</code>; Clay will pass the value on the generated runner URL at run time.</div>
           <div class="grid-2">
@@ -474,7 +693,7 @@ export function renderApp(basePath = ""): string {
           </div>
         </div>
 
-        <div class="section">
+        <div class="section step-panel" data-wizard-step="configure">
           <div class="section-title"><span class="step">2</span><h3>Pagination</h3></div>
           <div class="section-copy">Choose the pagination style from the API docs. Max pages is a safety cap, not the number of pages to fetch; the runner stops automatically when the API has no next page.</div>
           <div class="grid-3">
@@ -528,7 +747,7 @@ export function renderApp(basePath = ""): string {
           </div>
         </div>
 
-        <div class="section">
+        <div class="section step-panel" data-wizard-step="configure">
           <div class="section-title"><span class="step">3</span><h3>Response shaping</h3></div>
           <div class="section-copy">Return the full item by default, flatten JSON:API attributes for easier Clay columns, or select only the fields Clay needs.</div>
           <div class="grid-2">
@@ -544,7 +763,7 @@ export function renderApp(basePath = ""): string {
           <div class="hint">Use one field per line as <code>output_name:path.to.value</code>. Selected fields only applies when Shape mode is Select fields.</div>
         </div>
 
-        <div class="section">
+        <div class="section step-panel" data-wizard-step="configure">
           <div class="section-title"><span class="step">4</span><h3>Safety and rate controls</h3></div>
           <div class="section-copy">These controls prevent runaway loops and help with rate-limited APIs. The defaults stop on empty pages and repeated next links while still allowing full pagination.</div>
           <div class="grid-3">
@@ -566,9 +785,13 @@ export function renderApp(basePath = ""): string {
             <label><input id="stopOnDuplicateItemId" type="checkbox"> Stop on duplicate item ID</label>
             <label>Item ID path<input id="itemIdPath" value="id"></label>
           </div>
+          <div class="wizard-nav">
+            <button id="configureBackBtn" type="button">Back to AI</button>
+            <button id="configureContinueBtn" class="primary" type="button">Continue to Testing</button>
+          </div>
         </div>
 
-        <div class="section">
+        <div class="section step-panel" data-wizard-step="test">
           <div class="section-title"><span class="step">5</span><h3>Auth and test</h3></div>
           <div class="section-copy">List only the header names Clay should forward at run time. Use test credentials here to verify the runner; test credentials and query values are not saved.</div>
           <label>Pass-through headers<input id="passThroughHeaders" value="authorization,x-api-key,api-key"></label>
@@ -592,15 +815,23 @@ export function renderApp(basePath = ""): string {
           </div>
           <div id="trace" class="trace"></div>
           <pre id="output">{}</pre>
+          <div class="wizard-nav">
+            <button id="testBackBtn" type="button">Back to Configuration</button>
+            <button id="testContinueBtn" class="primary" type="button" disabled>Continue to Review</button>
+          </div>
         </div>
 
-        <div class="section">
+        <div class="section step-panel" data-wizard-step="review">
           <div class="section-title"><span class="step">6</span><h3>Save and connect</h3></div>
-          <div class="section-copy">Save only after testing. Saved runners are locked so live Clay tables keep a stable URL and behavior.</div>
+          <div class="section-copy">Review the tested configuration, then save. Saved runners are locked so live Clay tables keep a stable URL and behavior.</div>
+          <div id="reviewSummary" class="review-grid"></div>
           <div id="urlShape" class="hint"></div>
           <div id="validationWarnings" class="notice warning" hidden></div>
           <div class="notice">Saving creates a stable URL. Saved runners cannot be edited or deleted.</div>
-          <div class="actions"><button id="saveBtn" type="button">Save runner</button><div id="status" class="status"></div></div>
+          <div class="wizard-nav">
+            <button id="reviewBackBtn" type="button">Back to Testing</button>
+            <div class="actions"><button id="saveBtn" class="primary" type="button">Save runner</button><div id="status" class="status"></div></div>
+          </div>
           <div id="runUrl" class="url-box" hidden>
             <strong>Clay URL</strong>
             <code id="runUrlText"></code>
@@ -611,46 +842,80 @@ export function renderApp(basePath = ""): string {
       </div>
     </section>
 
-    <aside>
-      <section class="panel">
-        <div class="panel-head">
-          <div>
-            <h2>Configurations</h2>
-            <div class="hint">Sorted by Clay call volume.</div>
-          </div>
-          <button id="refreshBtn" type="button">Refresh</button>
-        </div>
-        <div class="panel-body"><div id="savedList" class="saved-list"></div></div>
-      </section>
+      </div>
+    </section>
 
-      <section id="analyticsPanel" class="panel" hidden>
-        <div class="panel-head">
-          <h2>Analytics</h2>
-          <button id="analyticsRefreshBtn" type="button">Refresh</button>
+    <section id="detailsView" class="app-view" hidden>
+      <div class="view-head">
+        <div>
+          <button id="detailsBackBtn" type="button">Back to List</button>
+          <h2 id="detailName">Runner details</h2>
+          <div class="view-subtitle"><span id="detailMethod" class="badge"></span> <span id="detailPagination" class="badge"></span></div>
         </div>
-        <div class="panel-body">
-          <div class="metrics">
-            <div class="metric"><span>Total calls</span><strong id="metricTotalRuns">0</strong></div>
-            <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
-            <div class="metric"><span>Items returned</span><strong id="metricItems">0</strong></div>
-            <div class="metric"><span>Avg duration</span><strong id="metricDuration">0 ms</strong></div>
-            <div class="metric"><span>Avg pages</span><strong id="metricAvgPages">0</strong></div>
-            <div class="metric"><span>Retries</span><strong id="metricRetries">0</strong></div>
+        <button id="refreshBtn" type="button">Refresh</button>
+      </div>
+      <div id="detailStatus" class="status"></div>
+      <div class="detail-grid">
+        <div class="detail-stack">
+          <section class="panel">
+            <div class="panel-head"><h2>Generated Runner URL</h2></div>
+            <div class="panel-body">
+              <div class="url-box">
+                <code id="detailRunUrlText"></code>
+                <div class="actions"><button id="detailCopyBtn" type="button">Copy URL</button><button id="detailCopySetupBtn" type="button">Copy Clay setup</button></div>
+              </div>
+              <div id="detailClaySetup" class="notice"></div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Configuration Details</h2></div>
+            <div class="panel-body">
+              <div class="detail-row"><span class="detail-label">Target endpoint</span><code id="detailTargetUrl"></code></div>
+              <div class="review-grid">
+                <div><span class="detail-label">Method</span><strong id="detailMethodValue"></strong></div>
+                <div><span class="detail-label">Result path</span><strong id="detailResultPath"></strong></div>
+                <div><span class="detail-label">Response</span><strong id="detailResponseMode"></strong></div>
+                <div><span class="detail-label">Max pages</span><strong id="detailMaxPages"></strong></div>
+                <div><span class="detail-label">Page size</span><strong id="detailPageSize"></strong></div>
+                <div><span class="detail-label">Shape</span><strong id="detailShapeMode"></strong></div>
+              </div>
+              <div class="notice locked">Saved runners are immutable. Create a new runner for changes.</div>
+            </div>
+          </section>
+          <section class="panel">
+            <div class="panel-head"><h2>Recent Runs</h2></div>
+            <div class="panel-body"><div id="detailRecentRuns" class="trace"></div></div>
+          </section>
+        </div>
+        <section id="analyticsPanel" class="panel" hidden>
+          <div class="panel-head">
+            <h2>Analytics</h2>
+            <button id="analyticsRefreshBtn" type="button">Refresh</button>
           </div>
-          <div id="statusCounts" class="actions"></div>
-          <div id="stopCounts" class="actions"></div>
-          <div id="errorCounts" class="actions"></div>
-          <div id="statusChart" class="chart"></div>
-          <div id="volumeChart" class="chart"></div>
-          <div id="recentRuns" class="hint"></div>
-        </div>
-      </section>
-    </aside>
+          <div class="panel-body">
+            <div class="metrics">
+              <div class="metric"><span>Total calls</span><strong id="metricTotalRuns">0</strong></div>
+              <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
+              <div class="metric"><span>Items returned</span><strong id="metricItems">0</strong></div>
+              <div class="metric"><span>Avg duration</span><strong id="metricDuration">0 ms</strong></div>
+              <div class="metric"><span>Avg pages</span><strong id="metricAvgPages">0</strong></div>
+              <div class="metric"><span>Retries</span><strong id="metricRetries">0</strong></div>
+            </div>
+            <div id="statusCounts" class="actions"></div>
+            <div id="stopCounts" class="actions"></div>
+            <div id="errorCounts" class="actions"></div>
+            <div id="statusChart" class="chart"></div>
+            <div id="volumeChart" class="chart"></div>
+            <div id="recentRuns" class="hint"></div>
+          </div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <script>
     const BASE_PATH = ${JSON.stringify(basePath)};
-    const state = { id: null, locked: false };
+    const state = { id: null, locked: false, view: "list", step: "ai", lastTestOk: false, configs: [], detailRunUrl: "" };
     const $ = (id) => document.getElementById(id);
     const editableIds = ["name","method","targetUrl","resultPath","responseMode","maxItems","paginationType","maxPages","pageSize","pageParam","pageSizeParam","startPage","nextLinkPath","totalPagesPath","offsetParam","limitParam","startOffset","cursorParam","nextCursorPath","initialCursor","shapeMode","shapeFields","delayMs","retryAttempts","timeoutMs","retryStatuses","maxDurationMs","maxResponseBytes","respectRetryAfter","stopOnEmptyPage","stopOnRepeatedNext","stopOnDuplicateItemId","itemIdPath","passThroughHeaders","bodyTemplate"];
     const defaults = {
@@ -744,8 +1009,12 @@ export function renderApp(basePath = ""): string {
     }
 
     function setStatus(message, ok = true) {
-      $("status").textContent = message;
-      $("status").className = "status " + (ok ? "ok" : "err");
+      ["status", "flowStatus", "listStatus", "detailStatus"].forEach((id) => {
+        const element = $(id);
+        if (!element) return;
+        element.textContent = message;
+        element.className = "status " + (ok ? "ok" : "err");
+      });
     }
 
     function updateUrlShape() {
@@ -761,6 +1030,59 @@ export function renderApp(basePath = ""): string {
       $("aiObjectStatus").style.color = ok ? "var(--secondary)" : "var(--danger)";
     }
 
+    function showView(view) {
+      state.view = view;
+      $("listView").hidden = view !== "list";
+      $("createView").hidden = view !== "create";
+      $("detailsView").hidden = view !== "details";
+      if (view === "create") setWizardStep(state.step || "ai");
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+
+    function setWizardStep(step) {
+      state.step = step;
+      const subtitles = {
+        ai: "Let AI help you configure from documentation.",
+        configure: "Review and adjust endpoint, pagination, safety, and output settings.",
+        test: "Test with temporary credentials before saving.",
+        review: "Review the tested configuration and save an immutable runner."
+      };
+      $("createSubtitle").textContent = subtitles[step] || "";
+      document.querySelectorAll("[data-wizard-step]").forEach((section) => {
+        section.hidden = section.dataset.wizardStep !== step;
+      });
+      const order = ["ai", "configure", "test", "review"];
+      document.querySelectorAll("[data-progress-step]").forEach((item) => {
+        const itemStep = item.dataset.progressStep;
+        item.className = "progress-step" +
+          (itemStep === step ? " active" : "") +
+          (order.indexOf(itemStep) < order.indexOf(step) ? " complete" : "");
+      });
+      if (step === "review") renderReviewSummary();
+      window.scrollTo({ top: 0, behavior: "auto" });
+    }
+
+    function resetCreateFlow() {
+      applyConfig(defaults);
+      state.id = null;
+      state.locked = false;
+      state.lastTestOk = false;
+      setLocked(false);
+      setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
+      $("runUrl").hidden = true;
+      $("trace").innerHTML = "";
+      $("claySetup").textContent = "";
+      $("aiObjectReview").hidden = true;
+      $("aiObjectPaste").value = "";
+      $("output").textContent = "{}";
+      $("testContinueBtn").disabled = true;
+      $("analyticsPanel").hidden = true;
+      setAiObjectStatus("");
+      setStatus("", true);
+      setWizardStep("ai");
+      showView("create");
+    }
+
     function buildAiPrompt() {
       const docsUrl = $("docsUrl").value.trim();
       const goal = $("docsGoal").value.trim();
@@ -774,6 +1096,7 @@ export function renderApp(basePath = ""): string {
         "",
         "Task:",
         "Given the API documentation URL, any attached API documentation file, and any pasted excerpt below, return one strict JSON object that a non-technical user can paste back into the Clay Pagination Runner app.",
+        "The app is a guided flow: AI Setup -> Configure -> Test -> Review & Save. Your object will be pasted into AI Setup, applied to the form, then reviewed by the user before a required test and immutable save.",
         "",
         "API documentation URL:",
         docsUrl || "(not provided)",
@@ -801,7 +1124,8 @@ export function renderApp(basePath = ""): string {
         "11. Choose responseShape mode raw unless the API is JSON:API and flattening attributes would clearly help Clay users.",
         "12. For every non-blank value you return, include an explanation with certainty: high, medium, or low.",
         "13. If a value is not confirmed by the docs, leave it blank or null instead of guessing, explain the uncertainty, and add a warning.",
-        "14. Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.",
+        "14. For values that are not confirmed, do not repeat the current defaults. The app clears untouched defaults so the user can see what still needs review.",
+        "15. Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.",
         "",
         "Return exactly this JSON object shape:",
         "{",
@@ -888,7 +1212,11 @@ export function renderApp(basePath = ""): string {
       row.innerHTML = '<label>Name<input class="header-name"></label><label>Value<input class="header-value"></label><button type="button">x</button>';
       row.querySelector(".header-name").value = pair.name || "";
       row.querySelector(".header-value").value = pair.value || "";
-      row.querySelector("button").addEventListener("click", () => row.remove());
+      row.querySelector("button").addEventListener("click", () => { row.remove(); markConfigDirty(); });
+      row.querySelectorAll("input").forEach((input) => {
+        input.addEventListener("input", markConfigDirty);
+        input.addEventListener("change", markConfigDirty);
+      });
       $(containerId).appendChild(row);
       setLocked(state.locked);
     }
@@ -1303,6 +1631,9 @@ export function renderApp(basePath = ""): string {
       updatePaginationFields();
       renderAiObjectReview(parsed, applied, blanked);
       setAiObjectStatus("Applied " + applied.length + " field(s). Cleared " + blanked.length + " untouched default(s).");
+      state.lastTestOk = false;
+      $("testContinueBtn").disabled = true;
+      setWizardStep("configure");
     }
 
     function renderAiObjectReview(parsed, applied, blanked) {
@@ -1481,6 +1812,29 @@ export function renderApp(basePath = ""): string {
       return warnings;
     }
 
+    function renderReviewSummary() {
+      const config = readConfig();
+      const summary = $("reviewSummary");
+      const cells = [
+        ["Name", config.name || "Untitled"],
+        ["Endpoint", config.method + " " + config.targetUrl],
+        ["Pagination", config.pagination.type + " · cap " + config.pagination.maxPages],
+        ["Result path", config.resultPath],
+        ["Page size", config.pagination.pageSize || "Not set"],
+        ["Shape", config.responseShape?.mode || "raw"]
+      ];
+      summary.innerHTML = "";
+      cells.forEach(([label, value]) => {
+        const cell = document.createElement("div");
+        cell.className = "metric";
+        cell.innerHTML = "<span></span><strong></strong>";
+        cell.querySelector("span").textContent = label;
+        cell.querySelector("strong").textContent = value;
+        summary.appendChild(cell);
+      });
+      renderValidationWarnings();
+    }
+
     function applyConfig(config) {
       state.id = config.id || null;
       state.locked = Boolean(state.id);
@@ -1562,31 +1916,49 @@ export function renderApp(basePath = ""): string {
 
     async function refreshList() {
       const body = await api("/api/configs");
+      state.configs = body.configs || [];
+      renderListStats(state.configs);
       const list = $("savedList");
       list.innerHTML = "";
-      if (!body.configs.length) {
-        list.innerHTML = '<div class="hint">No runners yet. Create one on the left.</div>';
+      if (!state.configs.length) {
+        list.innerHTML = '<div class="panel"><div class="panel-body" style="text-align:center; padding:48px;"><h2>No runners yet</h2><div class="view-subtitle">Create your first API pagination runner to get started.</div><div class="actions" style="justify-content:center; margin-top:16px;"><button class="primary" type="button" id="emptyCreateBtn">Create New Runner</button></div></div></div>';
+        $("emptyCreateBtn").addEventListener("click", resetCreateFlow);
         return;
       }
-      body.configs.forEach((config) => {
+      state.configs.forEach((config) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.className = "saved-item";
-        button.innerHTML = '<strong></strong><span class="volume"></span><small></small>';
-        button.querySelector("strong").textContent = config.name;
-        button.querySelector(".volume").textContent = (config.clayCalls || 0) + " calls";
-        button.querySelector("small").textContent = config.method + " " + config.targetUrl;
-        button.addEventListener("click", async () => {
-          const detail = await api("/api/configs/" + config.id);
-          applyConfig(detail.config);
-          showRunUrl(detail.runUrl);
-          renderClaySetup(detail.runUrl, detail.config);
-          print(detail.config);
-          setStatus("Loaded", true);
-          await refreshAnalytics();
-        });
+        button.className = "runner-card";
+        button.innerHTML = '<div><div class="runner-title"><strong></strong><span class="badge method"></span><span class="badge type"></span></div><div class="runner-url"></div><div class="runner-metrics"><div><span>Total calls</span><strong class="total"></strong></div><div><span>Clay calls</span><strong class="clay"></strong></div><div><span>Last run</span><strong class="last"></strong></div><div><span>Created</span><strong class="created"></strong></div><div><span>Runner ID</span><strong class="rid"></strong></div></div></div><div><span class="badge">View details</span></div>';
+        button.querySelector(".runner-title strong").textContent = config.name;
+        button.querySelector(".method").textContent = config.method;
+        button.querySelector(".type").textContent = config.paginationType || "runner";
+        button.querySelector(".runner-url").textContent = config.targetUrl;
+        button.querySelector(".total").textContent = config.totalCalls || 0;
+        button.querySelector(".clay").textContent = config.clayCalls || 0;
+        button.querySelector(".last").textContent = config.lastRunAt ? formatRelative(config.lastRunAt) : "Never";
+        button.querySelector(".created").textContent = formatRelative(config.createdAt);
+        button.querySelector(".rid").textContent = config.id.slice(0, 8);
+        button.addEventListener("click", () => openDetails(config.id).catch((error) => setStatus(error.message, false)));
         list.appendChild(button);
       });
+    }
+
+    function renderListStats(configs) {
+      $("overviewRunnerCount").textContent = configs.length;
+      $("overviewTotalRuns").textContent = configs.reduce((sum, config) => sum + Number(config.totalCalls || 0), 0);
+      $("overviewClayRuns").textContent = configs.reduce((sum, config) => sum + Number(config.clayCalls || 0), 0);
+    }
+
+    function formatRelative(value) {
+      const then = new Date(value).getTime();
+      const diff = Math.max(0, Date.now() - then);
+      const mins = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+      if (mins < 60) return mins + "m ago";
+      if (hours < 24) return hours + "h ago";
+      return days + "d ago";
     }
 
     function renderTrace(pages) {
@@ -1648,6 +2020,8 @@ export function renderApp(basePath = ""): string {
       });
       print(body);
       renderTrace(body.pages);
+      state.lastTestOk = true;
+      $("testContinueBtn").disabled = false;
       setStatus("Test returned " + body.itemCount + " items across " + body.pageCount + " page(s). Stop: " + body.stopReason, true);
       if (state.id) await refreshAnalytics();
     }
@@ -1656,17 +2030,23 @@ export function renderApp(basePath = ""): string {
       if (state.locked) return;
       requireFormReady();
       renderValidationWarnings();
+      if (!state.lastTestOk) {
+        setStatus("Run a successful test before saving this immutable runner.", false);
+        setWizardStep("test");
+        return;
+      }
       setStatus("Saving...", true);
       const body = await api("/api/configs", { method: "POST", body: JSON.stringify({ config: readConfig() }) });
       state.id = body.config.id;
       state.locked = true;
+      state.detailRunUrl = body.runUrl;
       showRunUrl(body.runUrl);
       renderClaySetup(body.runUrl, body.config);
       print(body);
       setLocked(true);
       setStatus("Saved", true);
       await refreshList();
-      await refreshAnalytics();
+      await openDetails(body.config.id);
     }
 
     function buildClaySetup(url, config = readConfig()) {
@@ -1688,6 +2068,26 @@ export function renderApp(basePath = ""): string {
 
     function renderClaySetup(url, config = readConfig()) {
       $("claySetup").textContent = buildClaySetup(url, config);
+    }
+
+    async function openDetails(id) {
+      const detail = await api("/api/configs/" + id);
+      applyConfig(detail.config);
+      state.detailRunUrl = detail.runUrl;
+      $("detailName").textContent = detail.config.name;
+      $("detailMethod").textContent = detail.config.method;
+      $("detailPagination").textContent = detail.config.pagination?.type || "runner";
+      $("detailRunUrlText").textContent = detail.runUrl;
+      $("detailClaySetup").textContent = buildClaySetup(detail.runUrl, detail.config);
+      $("detailTargetUrl").textContent = detail.config.targetUrl;
+      $("detailMethodValue").textContent = detail.config.method;
+      $("detailResultPath").textContent = detail.config.resultPath;
+      $("detailResponseMode").textContent = detail.config.responseMode;
+      $("detailMaxPages").textContent = detail.config.pagination?.maxPages || "";
+      $("detailPageSize").textContent = detail.config.pagination?.pageSize || "Not set";
+      $("detailShapeMode").textContent = detail.config.responseShape?.mode || "raw";
+      showView("details");
+      await refreshAnalytics();
     }
 
     async function refreshAnalytics() {
@@ -1731,6 +2131,27 @@ export function renderApp(basePath = ""): string {
       renderChart(analytics.statusTimeline || []);
       renderVolumeChart(analytics.volumeTimeline || []);
       $("recentRuns").textContent = analytics.recentRuns?.length ? "Last call: " + analytics.recentRuns[0].status + " · " + analytics.recentRuns[0].itemCount + " items · stop " + (analytics.recentRuns[0].stopReason || "unknown") : "No calls yet.";
+      renderRecentRuns(analytics.recentRuns || []);
+    }
+
+    function renderRecentRuns(runs) {
+      const list = $("detailRecentRuns");
+      list.innerHTML = "";
+      if (!runs.length) {
+        list.innerHTML = '<div class="hint">No calls yet.</div>';
+        return;
+      }
+      runs.slice(0, 10).forEach((run) => {
+        const row = document.createElement("div");
+        row.className = "trace-row";
+        row.innerHTML = "<strong></strong><span></span><span></span><span></span><code></code>";
+        row.querySelector("strong").textContent = run.mode;
+        row.querySelectorAll("span")[0].textContent = run.upstreamStatus ? String(run.upstreamStatus) : run.status;
+        row.querySelectorAll("span")[1].textContent = (run.itemCount || 0) + " items";
+        row.querySelectorAll("span")[2].textContent = (run.durationMs || 0) + " ms";
+        row.querySelector("code").textContent = formatRelative(run.createdAt) + " · " + (run.stopReason || run.error || "complete");
+        list.appendChild(row);
+      });
     }
 
     function renderChart(points) {
@@ -1769,27 +2190,51 @@ export function renderApp(basePath = ""): string {
       });
     }
 
-    $("newBtn").addEventListener("click", () => {
-      applyConfig(defaults);
-      state.id = null;
-      state.locked = false;
-      setLocked(false);
-      setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
-      $("runUrl").hidden = true;
-      $("analyticsPanel").hidden = true;
-      $("trace").innerHTML = "";
-      $("claySetup").textContent = "";
-      $("aiObjectReview").hidden = true;
-      $("aiObjectPaste").value = "";
-      setAiObjectStatus("");
-      print({});
-      setStatus("", true);
+    function markConfigDirty() {
+      state.lastTestOk = false;
+      $("testContinueBtn").disabled = true;
+    }
+
+    $("newBtn").addEventListener("click", resetCreateFlow);
+    $("newBtnSecondary").addEventListener("click", resetCreateFlow);
+    $("backToListBtn").addEventListener("click", () => {
+      refreshList().catch((error) => setStatus(error.message, false));
+      showView("list");
     });
-    $("refreshBtn").addEventListener("click", () => refreshList().catch((error) => setStatus(error.message, false)));
+    $("detailsBackBtn").addEventListener("click", () => {
+      refreshList().catch((error) => setStatus(error.message, false));
+      showView("list");
+    });
+    $("skipAiBtn").addEventListener("click", () => setWizardStep("configure"));
+    $("aiContinueBtn").addEventListener("click", () => setWizardStep("configure"));
+    $("configureBackBtn").addEventListener("click", () => setWizardStep("ai"));
+    $("configureContinueBtn").addEventListener("click", () => {
+      try {
+        requireFormReady();
+        setStatus("", true);
+        setWizardStep("test");
+      } catch (error) {
+        setStatus(error.message, false);
+      }
+    });
+    $("testBackBtn").addEventListener("click", () => setWizardStep("configure"));
+    $("testContinueBtn").addEventListener("click", () => {
+      if (!state.lastTestOk) {
+        setStatus("Run a successful test before review.", false);
+        return;
+      }
+      setStatus("", true);
+      setWizardStep("review");
+    });
+    $("reviewBackBtn").addEventListener("click", () => setWizardStep("test"));
+    $("refreshBtn").addEventListener("click", () => {
+      const action = state.view === "details" && state.id ? openDetails(state.id) : refreshList();
+      action.catch((error) => setStatus(error.message, false));
+    });
     $("analyticsRefreshBtn").addEventListener("click", () => refreshAnalytics().catch((error) => setStatus(error.message, false)));
-    $("addStaticHeader").addEventListener("click", () => addHeaderRow("staticHeaders"));
-    $("addCredentialHeader").addEventListener("click", () => addHeaderRow("credentialHeaders"));
-    $("paginationType").addEventListener("change", updatePaginationFields);
+    $("addStaticHeader").addEventListener("click", () => { addHeaderRow("staticHeaders"); markConfigDirty(); });
+    $("addCredentialHeader").addEventListener("click", () => { addHeaderRow("credentialHeaders"); markConfigDirty(); });
+    $("paginationType").addEventListener("change", () => { updatePaginationFields(); markConfigDirty(); });
     $("detectBtn").addEventListener("click", () => runDetect().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
     $("testBtn").addEventListener("click", () => runTest().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
     $("saveBtn").addEventListener("click", () => saveRunner().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
@@ -1799,6 +2244,14 @@ export function renderApp(basePath = ""): string {
     });
     $("copySetupBtn").addEventListener("click", async () => {
       await navigator.clipboard.writeText($("claySetup").textContent || buildClaySetup($("runUrlText").textContent));
+      setStatus("Setup copied", true);
+    });
+    $("detailCopyBtn").addEventListener("click", async () => {
+      await navigator.clipboard.writeText($("detailRunUrlText").textContent);
+      setStatus("Copied", true);
+    });
+    $("detailCopySetupBtn").addEventListener("click", async () => {
+      await navigator.clipboard.writeText($("detailClaySetup").textContent || buildClaySetup($("detailRunUrlText").textContent));
       setStatus("Setup copied", true);
     });
 
@@ -1821,8 +2274,8 @@ export function renderApp(basePath = ""): string {
     editableIds.forEach((id) => {
       const element = $(id);
       if (element) {
-        element.addEventListener("input", renderValidationWarnings);
-        element.addEventListener("change", renderValidationWarnings);
+        element.addEventListener("input", () => { renderValidationWarnings(); markConfigDirty(); });
+        element.addEventListener("change", () => { renderValidationWarnings(); markConfigDirty(); });
       }
     });
 

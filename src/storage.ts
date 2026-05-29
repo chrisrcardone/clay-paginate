@@ -23,6 +23,7 @@ export interface ConfigSummary {
   name: string;
   targetUrl: string;
   method: string;
+  paginationType: string;
   runUrl: string;
   totalCalls: number;
   clayCalls: number;
@@ -39,6 +40,7 @@ export async function listConfigs(db: D1Database, publicBaseUrl: string): Promis
          c.name,
          c.target_url,
          c.target_method,
+         c.config_json,
          c.created_at,
          c.updated_at,
          COUNT(r.id) AS total_calls,
@@ -50,20 +52,36 @@ export async function listConfigs(db: D1Database, publicBaseUrl: string): Promis
        ORDER BY clay_calls DESC, total_calls DESC, c.created_at DESC
        LIMIT 100`,
     )
-    .all<Omit<SavedConfigRow, "config_json">>();
+    .all<SavedConfigRow>();
 
   return (result.results ?? []).map((row) => ({
+    ...toConfigSummary(row, publicBaseUrl),
+  }));
+}
+
+function toConfigSummary(row: SavedConfigRow, publicBaseUrl: string): ConfigSummary {
+  const parsed = safeParseConfig(row.config_json);
+  return {
     id: row.id,
     name: row.name,
     targetUrl: row.target_url,
     method: row.target_method,
+    paginationType: parsed?.pagination?.type ?? "runner",
     runUrl: `${publicBaseUrl}/${row.id}`,
     totalCalls: Number(row.total_calls ?? 0),
     clayCalls: Number(row.clay_calls ?? 0),
     lastRunAt: row.last_run_at ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-  }));
+  };
+}
+
+function safeParseConfig(configJson: string): RunnerConfig | null {
+  try {
+    return JSON.parse(configJson) as RunnerConfig;
+  } catch {
+    return null;
+  }
 }
 
 export async function getConfig(db: D1Database, id: string): Promise<RunnerConfig | null> {
