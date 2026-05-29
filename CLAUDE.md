@@ -24,7 +24,8 @@ When changing code:
 - Keep the UI simple and field-focused.
 - Preserve fail-closed admin API auth with `ADMIN_TOKEN`.
 - Preserve HTTPS/private-host upstream validation and cross-host next-link blocking.
-- Preserve optional runner access controls: `ALLOWED_RUN_CIDRS` for Clay surfaces with static IPs, and `RUNNER_AUTH_TOKEN` / `x-clay-paginate-token` for Clay surfaces without static IPs. If both are configured, either one may authorize the generated runner URL.
+- Preserve optional runner access controls: `ALLOWED_RUN_CIDRS` for Clay surfaces with static IPs, and per-runner encrypted tokens via `x-clay-paginate-token` for Clay surfaces without static IPs. If both are configured, either one may authorize the generated runner URL.
+- Never return runner token values in JSON; token values are emailed only to `@clay.com` recipients.
 - Keep analytics metadata-only.
 - Preserve immutable saved configurations.
 - Preserve generated URL stability.

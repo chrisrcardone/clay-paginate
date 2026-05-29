@@ -96,6 +96,7 @@ Copy the returned `database_id` into `wrangler.jsonc`, then run:
 
 ```sh
 npx wrangler secret put ADMIN_TOKEN
+npx wrangler secret put RUNNER_TOKEN_ENCRYPTION_KEY
 npm run db:migrate:remote
 npm run deploy
 ```
@@ -106,11 +107,13 @@ Admin APIs fail closed unless `ADMIN_TOKEN` is configured. Paste the same token 
 
 Optional production hardening:
 
-- `RUNNER_AUTH_TOKEN`: shared token for Clay calls to generated runner URLs. When set, Clay must send `x-clay-paginate-token: <token>` on each runner request. This is separate from upstream API auth and is never forwarded to the upstream API.
+- Per-runner tokens: open a saved runner, enter a `@clay.com` email, and generate/email that runner's access token. Tokens are stored encrypted in D1, are never returned in JSON, and are sent by Cloudflare Email from `no-reply@chris-apis.xyz`.
+- `RUNNER_TOKEN_ENCRYPTION_KEY`: secret used to encrypt per-runner tokens at rest.
+- `RUNNER_AUTH_TOKEN`: legacy shared token fallback for runners that do not have a per-runner token yet. Once a runner-specific token exists, that token takes precedence for that runner.
 - `ALLOWED_RUN_CIDRS`: comma-separated CIDRs allowed to call public runner URLs. Use this only when the Clay surface you are using has static IP support, for example `203.0.113.10/32,203.0.113.11/32`.
-- Runner access can use static IP, runner header auth, or both. If both `ALLOWED_RUN_CIDRS` and `RUNNER_AUTH_TOKEN` are configured, either a matching caller IP or a valid `x-clay-paginate-token` is enough. Admin token calls still bypass this for operator smoke tests.
+- Runner access can use static IP, runner header auth, or both. If both `ALLOWED_RUN_CIDRS` and runner header auth are configured, either a matching caller IP or a valid `x-clay-paginate-token` is enough. Admin token calls still bypass this for operator smoke tests.
 - `ALLOWED_UPSTREAM_HOSTS`: comma-separated upstream host allowlist, supporting exact hosts and wildcards like `data.g2.com,*.example.com`.
-- Cloudflare Access: recommended for the UI/admin surface. Keep generated runner URLs reachable by Clay, then protect those URLs with `RUNNER_AUTH_TOKEN`, `ALLOWED_RUN_CIDRS`, or both.
+- Cloudflare Access: recommended for the UI/admin surface. Keep generated runner URLs reachable by Clay, then protect those URLs with per-runner tokens, `ALLOWED_RUN_CIDRS`, or both.
 
 ## Privacy model
 
@@ -141,10 +144,12 @@ Optional production hardening:
 
 Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs. After saving, open the runner details screen for the Clay setup copy block, immutable configuration details, metadata-only analytics, and recent run summaries.
 
-If the deployment has `RUNNER_AUTH_TOKEN` enabled, add this Clay request header alongside any upstream credential headers:
+If the runner has a runner access token, add this Clay request header alongside any upstream credential headers:
 
 ```text
 x-clay-paginate-token: <runner token>
 ```
 
 Do not add `x-clay-paginate-token` to the runner's pass-through headers. It authenticates Clay to this Worker only and is stripped before upstream requests.
+
+Regenerating a runner token invalidates the previous token for that runner. Any Clay Signals or workflows using the old token will fail until updated.

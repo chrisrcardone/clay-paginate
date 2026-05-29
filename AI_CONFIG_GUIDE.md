@@ -14,7 +14,7 @@ https://paginate.chris-apis.xyz/<config-id>
 
 Clay sends runtime credentials to that URL. The runner forwards only the configured pass-through headers and returns one combined array of all paginated results.
 
-If the deployment requires runner-call authentication, Clay may also send `x-clay-paginate-token` to the generated URL. That header authenticates Clay to this Worker only; do not include it in `passThroughHeaders` and do not treat it as an upstream API credential.
+If the deployment requires runner-call authentication, Clay may also send `x-clay-paginate-token` to the generated URL. That header authenticates Clay to this Worker only; do not include it in `passThroughHeaders` and do not treat it as an upstream API credential. Runner tokens are managed in the saved runner details screen and are emailed only to `@clay.com` recipients.
 
 ## App Flow
 

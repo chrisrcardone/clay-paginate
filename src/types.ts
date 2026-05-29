@@ -1,7 +1,9 @@
 export interface Env {
   DB: D1Database;
+  EMAIL?: SendEmail;
   ADMIN_TOKEN?: string;
   RUNNER_AUTH_TOKEN?: string;
+  RUNNER_TOKEN_ENCRYPTION_KEY?: string;
   ALLOWED_RUN_CIDRS?: string;
   ALLOWED_UPSTREAM_HOSTS?: string;
 }
@@ -143,6 +145,14 @@ export interface RunLogSummary {
   stopReason: string | null;
   retryCount: number;
   createdAt: string;
+}
+
+export interface RunnerTokenStatus {
+  exists: boolean;
+  createdAt: string | null;
+  updatedAt: string | null;
+  rotatedAt: string | null;
+  emailedAt: string | null;
 }
 
 export interface PageDebug {

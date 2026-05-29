@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import worker from "../src/index";
+import { encryptRunnerToken } from "../src/runnerToken";
 import type { Env, RunnerConfig } from "../src/types";
 
 const baseConfig: RunnerConfig = {
@@ -17,13 +18,13 @@ const baseConfig: RunnerConfig = {
 };
 
 const env = (overrides: Partial<Env> = {}): Env => ({
-  DB: {} as D1Database,
+  DB: dbWithConfig(null),
   ADMIN_TOKEN: "admin-secret",
   ...overrides,
 });
 
-function dbWithConfig(config: RunnerConfig | null): D1Database {
-  const row = config
+function dbWithConfig(config: RunnerConfig | null, tokenRowInput: Record<string, unknown> | null = null): D1Database {
+  const configRow = config
     ? {
       id: config.id ?? "runner-id",
       name: config.name,
@@ -34,15 +35,47 @@ function dbWithConfig(config: RunnerConfig | null): D1Database {
       updated_at: new Date().toISOString(),
     }
     : null;
+  let tokenRow = tokenRowInput;
 
   return {
-    prepare: () => ({
-      bind: () => ({
-        first: async () => row,
-        run: async () => ({ success: true }),
+    prepare: (sql: string) => ({
+      bind: (...args: unknown[]) => ({
+        first: async () => {
+          if (sql.includes("FROM configs")) return configRow;
+          if (sql.includes("FROM runner_tokens")) return tokenRow;
+          return null;
+        },
+        run: async () => {
+          if (sql.includes("INSERT INTO runner_tokens")) {
+            tokenRow = {
+              config_id: args[0],
+              token_hash: args[1],
+              token_ciphertext: args[2],
+              token_iv: args[3],
+              created_at: args[4],
+              updated_at: args[5],
+              rotated_at: args[6],
+              emailed_at: null,
+            };
+          }
+          if (sql.includes("UPDATE runner_tokens SET emailed_at")) {
+            tokenRow = tokenRow ? { ...tokenRow, emailed_at: args[0], updated_at: args[1] } : tokenRow;
+          }
+          return { success: true };
+        },
+        all: async () => ({ results: [] }),
       }),
     }),
   } as unknown as D1Database;
+}
+
+function emailBinding(sent: unknown[]): SendEmail {
+  return {
+    send: async (message: unknown) => {
+      sent.push(message);
+      return { messageId: "test-message" };
+    },
+  } as SendEmail;
 }
 
 function request(path: string, init: RequestInit = {}): Request {
@@ -181,7 +214,7 @@ describe("security controls", () => {
       request("/runner-id", {
         headers: { "cf-connecting-ip": "198.51.100.10" },
       }),
-      env({ ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }), ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
     );
 
     expect(response.status).toBe(403);
@@ -196,13 +229,13 @@ describe("security controls", () => {
         },
       }),
       env({
-        DB: dbWithConfig(null),
+        DB: dbWithConfig({ ...baseConfig, id: "runner-id", targetUrl: "https://127.0.0.1/private" }),
         ALLOWED_RUN_CIDRS: "203.0.113.0/24",
         RUNNER_AUTH_TOKEN: "runner-secret",
       }),
     );
 
-    expect(response.status).toBe(404);
+    expect(response.status).toBe(400);
   });
 
   it("requires the runner token when token auth is configured without a CIDR gate", async () => {
@@ -210,10 +243,86 @@ describe("security controls", () => {
       request("/runner-id", {
         headers: { "cf-connecting-ip": "198.51.100.10" },
       }),
-      env({ RUNNER_AUTH_TOKEN: "runner-secret" }),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }), RUNNER_AUTH_TOKEN: "runner-secret" }),
     );
 
     expect(response.status).toBe(403);
+  });
+
+  it("prefers per-runner tokens over the legacy global runner token", async () => {
+    const encrypted = await encryptRunnerToken("runner-specific", "test-encryption-key");
+    const response = await worker.fetch(
+      request("/runner-id", {
+        headers: { "x-clay-paginate-token": "global-secret" },
+      }),
+      env({
+        DB: dbWithConfig(
+          { ...baseConfig, id: "runner-id" },
+          {
+            config_id: "runner-id",
+            token_hash: encrypted.tokenHash,
+            token_ciphertext: encrypted.tokenCiphertext,
+            token_iv: encrypted.tokenIv,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            rotated_at: null,
+            emailed_at: null,
+          },
+        ),
+        RUNNER_AUTH_TOKEN: "global-secret",
+      }),
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it("only emails runner tokens to clay.com addresses", async () => {
+    const response = await worker.fetch(
+      request("/api/configs/runner-id/runner-token/email", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({ email: "person@example.com", generateIfMissing: true }),
+      }),
+      env(),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
+  it("generates and emails a runner token without returning it in JSON", async () => {
+    const sent: unknown[] = [];
+    const response = await worker.fetch(
+      request("/api/configs/runner-id/runner-token/email", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({ email: "person@clay.com", generateIfMissing: true }),
+      }),
+      env({
+        DB: dbWithConfig({ ...baseConfig, id: "runner-id" }),
+        EMAIL: emailBinding(sent),
+        RUNNER_TOKEN_ENCRYPTION_KEY: "test-encryption-key",
+      }),
+    );
+
+    const bodyText = await response.text();
+    expect(response.status).toBe(200);
+    expect(bodyText).not.toContain("cpr_");
+    expect(sent).toHaveLength(1);
+    expect(JSON.stringify(sent[0])).toContain("person@clay.com");
+    expect(JSON.stringify(sent[0])).toContain("x-clay-paginate-token: cpr_");
+  });
+
+  it("requires explicit acknowledgement before regenerating runner tokens", async () => {
+    const response = await worker.fetch(
+      request("/api/configs/runner-id/runner-token/regenerate", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({ email: "person@clay.com", confirmation: "yes", acknowledgeOffline: true }),
+      }),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }) }),
+    );
+
+    expect(response.status).toBe(400);
   });
 
   it("does not trust spoofable x-forwarded-for for public runner CIDR checks", async () => {
@@ -221,7 +330,7 @@ describe("security controls", () => {
       request("/runner-id", {
         headers: { "x-forwarded-for": "203.0.113.10" },
       }),
-      env({ ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }), ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
     );
 
     expect(response.status).toBe(403);

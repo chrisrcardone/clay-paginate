@@ -1,5 +1,5 @@
 import { normalizeConfig } from "./pagination";
-import type { RunAnalytics, RunLogSummary, RunnerConfig, SavedConfigRow } from "./types";
+import type { RunAnalytics, RunLogSummary, RunnerConfig, RunnerTokenStatus, SavedConfigRow } from "./types";
 
 export class DuplicateConfigError extends Error {
   constructor(
@@ -30,6 +30,17 @@ export interface ConfigSummary {
   lastRunAt: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface RunnerTokenRecord {
+  configId: string;
+  tokenHash: string;
+  tokenCiphertext: string;
+  tokenIv: string;
+  createdAt: string;
+  updatedAt: string;
+  rotatedAt: string | null;
+  emailedAt: string | null;
 }
 
 export async function listConfigs(db: D1Database, publicBaseUrl: string): Promise<ConfigSummary[]> {
@@ -96,6 +107,81 @@ export async function getConfig(db: D1Database, id: string): Promise<RunnerConfi
   } as RunnerConfig;
 }
 
+export async function getRunnerTokenRecord(db: D1Database, configId: string): Promise<RunnerTokenRecord | null> {
+  const row = await db
+    .prepare("SELECT * FROM runner_tokens WHERE config_id = ?")
+    .bind(configId)
+    .first<{
+      config_id: string;
+      token_hash: string;
+      token_ciphertext: string;
+      token_iv: string;
+      created_at: string;
+      updated_at: string;
+      rotated_at: string | null;
+      emailed_at: string | null;
+    }>();
+  if (!row) return null;
+
+  return {
+    configId: row.config_id,
+    tokenHash: row.token_hash,
+    tokenCiphertext: row.token_ciphertext,
+    tokenIv: row.token_iv,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    rotatedAt: row.rotated_at,
+    emailedAt: row.emailed_at,
+  };
+}
+
+export async function getRunnerTokenStatus(db: D1Database, configId: string): Promise<RunnerTokenStatus> {
+  return toRunnerTokenStatus(await getRunnerTokenRecord(db, configId));
+}
+
+export async function upsertRunnerToken(
+  db: D1Database,
+  input: {
+    configId: string;
+    tokenHash: string;
+    tokenCiphertext: string;
+    tokenIv: string;
+    rotated: boolean;
+  },
+): Promise<RunnerTokenStatus> {
+  const now = new Date().toISOString();
+  await db
+    .prepare(
+      `INSERT INTO runner_tokens (config_id, token_hash, token_ciphertext, token_iv, created_at, updated_at, rotated_at, emailed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, NULL)
+       ON CONFLICT(config_id) DO UPDATE SET
+         token_hash = excluded.token_hash,
+         token_ciphertext = excluded.token_ciphertext,
+         token_iv = excluded.token_iv,
+         updated_at = excluded.updated_at,
+         rotated_at = excluded.rotated_at,
+         emailed_at = NULL`,
+    )
+    .bind(
+      input.configId,
+      input.tokenHash,
+      input.tokenCiphertext,
+      input.tokenIv,
+      now,
+      now,
+      input.rotated ? now : null,
+    )
+    .run();
+
+  return getRunnerTokenStatus(db, input.configId);
+}
+
+export async function markRunnerTokenEmailed(db: D1Database, configId: string): Promise<RunnerTokenStatus> {
+  const now = new Date().toISOString();
+  await db.prepare("UPDATE runner_tokens SET emailed_at = ?, updated_at = ? WHERE config_id = ?").bind(now, now, configId).run();
+  return getRunnerTokenStatus(db, configId);
+}
+
 export async function saveConfig(db: D1Database, config: RunnerConfig): Promise<RunnerConfig> {
   if (config.id) {
     throw new ImmutableConfigError();
@@ -122,6 +208,16 @@ export async function saveConfig(db: D1Database, config: RunnerConfig): Promise<
   }
 
   return stored;
+}
+
+function toRunnerTokenStatus(record: RunnerTokenRecord | null): RunnerTokenStatus {
+  return {
+    exists: Boolean(record),
+    createdAt: record?.createdAt ?? null,
+    updatedAt: record?.updatedAt ?? null,
+    rotatedAt: record?.rotatedAt ?? null,
+    emailedAt: record?.emailedAt ?? null,
+  };
 }
 
 export async function logRun(

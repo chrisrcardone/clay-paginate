@@ -17,7 +17,8 @@ This project is for non-technical users configuring paginated APIs for Clay HTTP
 ## Safety Invariants
 
 - Keep admin APIs protected by fail-closed `ADMIN_TOKEN` auth.
-- Keep public runner URLs separate from admin APIs. Use `ALLOWED_RUN_CIDRS` for Clay surfaces with static IP support, or `RUNNER_AUTH_TOKEN` with `x-clay-paginate-token` for Clay surfaces without static IPs. If both are configured, either gate can authorize a generated runner URL.
+- Keep public runner URLs separate from admin APIs. Use `ALLOWED_RUN_CIDRS` for Clay surfaces with static IP support, or per-runner encrypted tokens with `x-clay-paginate-token` for Clay surfaces without static IPs. If both are configured, either gate can authorize a generated runner URL.
+- Never return runner token values in JSON. Token values may only be sent through the Cloudflare Email binding to a `@clay.com` email address.
 - Keep upstream URL validation in place: HTTPS only, private-host blocking, and optional host allowlisting.
 - Keep next-link host pinning so pass-through credentials never follow a cross-host pagination link.
 - Do not store API credentials.

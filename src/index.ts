@@ -13,10 +13,15 @@ import {
   ImmutableConfigError,
   getAnalytics,
   getConfig,
+  getRunnerTokenRecord,
+  getRunnerTokenStatus,
   listConfigs,
   logRun,
+  markRunnerTokenEmailed,
   saveConfig,
+  upsertRunnerToken,
 } from "./storage";
+import { decryptRunnerToken, encryptRunnerToken, generateRunnerToken, verifyRunnerToken } from "./runnerToken";
 import type { Env, HeaderPair, RunnerConfig, TestRequest } from "./types";
 
 const JSON_HEADERS = {
@@ -37,6 +42,8 @@ const HTML_HEADERS = {
 
 const LEGACY_BASE_PATH = "/paginate";
 const RUNNER_AUTH_HEADERS = ["x-clay-paginate-token", "x-runner-token"];
+const RUNNER_TOKEN_CONFIRMATION = "REGENERATE RUNNER TOKEN";
+const TOKEN_EMAIL_FROM = "no-reply@chris-apis.xyz";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -92,6 +99,18 @@ export default {
       if (analyticsMatch && request.method === "GET") {
         requireAdmin(request, env);
         return await handleAnalytics(env, analyticsMatch[1]);
+      }
+
+      const tokenEmailMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/runner-token\/email$/);
+      if (tokenEmailMatch && request.method === "POST") {
+        requireAdmin(request, env);
+        return await handleEmailRunnerToken(request, env, tokenEmailMatch[1], route.publicBaseUrl(url.origin));
+      }
+
+      const tokenRegenerateMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/runner-token\/regenerate$/);
+      if (tokenRegenerateMatch && request.method === "POST") {
+        requireAdmin(request, env);
+        return await handleRegenerateRunnerToken(request, env, tokenRegenerateMatch[1], route.publicBaseUrl(url.origin));
       }
 
       const legacyRunMatch = route.appPath.match(/^\/run\/([^/]+)$/);
@@ -163,9 +182,10 @@ function requireAdmin(request: Request, env: Env): void {
   }
 }
 
-function assertRunCallerAllowed(request: Request, env: Env): void {
+async function assertRunCallerAllowed(request: Request, env: Env, configId: string): Promise<void> {
   const hasRunCidrGate = Boolean(env.ALLOWED_RUN_CIDRS?.trim());
-  const hasRunTokenGate = Boolean(env.RUNNER_AUTH_TOKEN);
+  const runnerToken = await getRunnerTokenRecord(env.DB, configId);
+  const hasRunTokenGate = Boolean(runnerToken || env.RUNNER_AUTH_TOKEN);
 
   if (!hasRunCidrGate && !hasRunTokenGate) {
     return;
@@ -173,7 +193,7 @@ function assertRunCallerAllowed(request: Request, env: Env): void {
 
   if (
     (hasRunCidrGate && isCallerIpAllowed(getClientIp(request), env.ALLOWED_RUN_CIDRS)) ||
-    (hasRunTokenGate && hasValidRunnerToken(request, env)) ||
+    (hasRunTokenGate && await hasValidRunnerToken(request, env, runnerToken)) ||
     hasValidAdminToken(request, env)
   ) {
     return;
@@ -189,11 +209,20 @@ function hasValidAdminToken(request: Request, env: Env): boolean {
   return constantTimeEqual(provided, expected);
 }
 
-function hasValidRunnerToken(request: Request, env: Env): boolean {
-  const expected = env.RUNNER_AUTH_TOKEN ?? "";
-  if (!expected) return false;
+async function hasValidRunnerToken(
+  request: Request,
+  env: Env,
+  runnerToken: Awaited<ReturnType<typeof getRunnerTokenRecord>>,
+): Promise<boolean> {
   const provided = RUNNER_AUTH_HEADERS.map((name) => request.headers.get(name) ?? "").find(Boolean) ?? "";
-  return constantTimeEqual(provided, expected);
+  if (!provided) return false;
+
+  if (runnerToken) {
+    return verifyRunnerToken(provided, runnerToken.tokenHash);
+  }
+
+  const expected = env.RUNNER_AUTH_TOKEN ?? "";
+  return Boolean(expected) && constantTimeEqual(provided, expected);
 }
 
 function constantTimeEqual(left: string, right: string): boolean {
@@ -290,15 +319,16 @@ async function handleGet(env: Env, id: string, publicBaseUrl: string): Promise<R
   return json({
     config,
     runUrl: `${publicBaseUrl}/${config.id}`,
+    runnerToken: await getRunnerTokenStatus(env.DB, id),
   });
 }
 
 async function handleRun(request: Request, env: Env, id: string): Promise<Response> {
-  assertRunCallerAllowed(request, env);
   const config = await getConfig(env.DB, id);
   if (!config) {
     return json({ error: "Config not found" }, 404);
   }
+  await assertRunCallerAllowed(request, env, id);
   validateConfigInput(config, env);
 
   const requestUrl = new URL(request.url);
@@ -349,6 +379,173 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
     });
     throw error;
   }
+}
+
+async function handleEmailRunnerToken(request: Request, env: Env, id: string, publicBaseUrl: string): Promise<Response> {
+  const body = await request.json<{ email?: string; generateIfMissing?: boolean }>();
+  const recipient = normalizeClayEmail(body.email);
+  const config = await requireConfig(env, id);
+  let tokenRecord = await getRunnerTokenRecord(env.DB, id);
+  let generated = false;
+  let token: string;
+
+  if (!tokenRecord) {
+    if (!body.generateIfMissing) {
+      return json(
+        {
+          error: "No runner token has been generated for this runner yet",
+          code: "runner_token_missing",
+        },
+        409,
+      );
+    }
+    token = await createAndStoreRunnerToken(env, id, false);
+    generated = true;
+  } else {
+    token = await decryptStoredRunnerToken(env, tokenRecord);
+  }
+
+  await sendRunnerTokenEmail(env, {
+    recipient,
+    token,
+    runUrl: `${publicBaseUrl}/${id}`,
+    runnerName: config.name,
+    regenerated: false,
+  });
+
+  return json({
+    ok: true,
+    generated,
+    recipient,
+    runnerToken: await markRunnerTokenEmailed(env.DB, id),
+  });
+}
+
+async function handleRegenerateRunnerToken(request: Request, env: Env, id: string, publicBaseUrl: string): Promise<Response> {
+  const body = await request.json<{ email?: string; confirmation?: string; acknowledgeOffline?: boolean }>();
+  const recipient = normalizeClayEmail(body.email);
+  if (body.confirmation !== RUNNER_TOKEN_CONFIRMATION || body.acknowledgeOffline !== true) {
+    throw new HttpError(400, `Type "${RUNNER_TOKEN_CONFIRMATION}" and acknowledge the outage risk before regenerating this runner token`);
+  }
+
+  const config = await requireConfig(env, id);
+  const token = await createAndStoreRunnerToken(env, id, true);
+  await sendRunnerTokenEmail(env, {
+    recipient,
+    token,
+    runUrl: `${publicBaseUrl}/${id}`,
+    runnerName: config.name,
+    regenerated: true,
+  });
+
+  return json({
+    ok: true,
+    regenerated: true,
+    recipient,
+    runnerToken: await markRunnerTokenEmailed(env.DB, id),
+  });
+}
+
+async function requireConfig(env: Env, id: string): Promise<RunnerConfig> {
+  const config = await getConfig(env.DB, id);
+  if (!config) {
+    throw new HttpError(404, "Config not found");
+  }
+  return config;
+}
+
+async function createAndStoreRunnerToken(env: Env, configId: string, rotated: boolean): Promise<string> {
+  if (!env.RUNNER_TOKEN_ENCRYPTION_KEY) {
+    throw new HttpError(503, "Runner token encryption is not configured");
+  }
+
+  const token = generateRunnerToken();
+  const encrypted = await encryptRunnerToken(token, env.RUNNER_TOKEN_ENCRYPTION_KEY);
+  await upsertRunnerToken(env.DB, {
+    configId,
+    tokenHash: encrypted.tokenHash,
+    tokenCiphertext: encrypted.tokenCiphertext,
+    tokenIv: encrypted.tokenIv,
+    rotated,
+  });
+  return token;
+}
+
+async function decryptStoredRunnerToken(
+  env: Env,
+  tokenRecord: NonNullable<Awaited<ReturnType<typeof getRunnerTokenRecord>>>,
+): Promise<string> {
+  if (!env.RUNNER_TOKEN_ENCRYPTION_KEY) {
+    throw new HttpError(503, "Runner token encryption is not configured");
+  }
+
+  return decryptRunnerToken(tokenRecord.tokenCiphertext, tokenRecord.tokenIv, env.RUNNER_TOKEN_ENCRYPTION_KEY);
+}
+
+async function sendRunnerTokenEmail(
+  env: Env,
+  input: {
+    recipient: string;
+    token: string;
+    runUrl: string;
+    runnerName: string;
+    regenerated: boolean;
+  },
+): Promise<void> {
+  if (!env.EMAIL) {
+    throw new HttpError(503, "Email sending is not configured");
+  }
+
+  const subject = input.regenerated
+    ? `Regenerated Clay Pagination Runner token for ${input.runnerName}`
+    : `Clay Pagination Runner token for ${input.runnerName}`;
+  const text = [
+    `Runner: ${input.runnerName}`,
+    `Runner URL: ${input.runUrl}`,
+    "",
+    "Use this request header when Clay calls the generated runner URL:",
+    `x-clay-paginate-token: ${input.token}`,
+    "",
+    "This token authenticates Clay to the pagination runner only. It is stripped before upstream API requests and is not an upstream API credential.",
+    input.regenerated ? "This token was regenerated. Any Clay Signals or workflows using the previous token must be updated before their next run." : "",
+  ].filter(Boolean).join("\n");
+
+  const html = `
+    <div style="font-family:Inter,Arial,sans-serif;line-height:1.5;color:#16181f">
+      <h2>Clay Pagination Runner token</h2>
+      <p><strong>Runner:</strong> ${escapeHtml(input.runnerName)}</p>
+      <p><strong>Runner URL:</strong> <a href="${escapeHtml(input.runUrl)}">${escapeHtml(input.runUrl)}</a></p>
+      <p>Use this request header when Clay calls the generated runner URL:</p>
+      <pre style="padding:12px;background:#f4f6f8;border:1px solid #d6d9df;border-radius:6px;white-space:pre-wrap">x-clay-paginate-token: ${escapeHtml(input.token)}</pre>
+      <p>This token authenticates Clay to the pagination runner only. It is stripped before upstream API requests and is not an upstream API credential.</p>
+      ${input.regenerated ? "<p><strong>Important:</strong> This token was regenerated. Any Clay Signals or workflows using the previous token must be updated before their next run.</p>" : ""}
+    </div>
+  `;
+
+  await env.EMAIL.send({
+    to: input.recipient,
+    from: { email: TOKEN_EMAIL_FROM, name: "Clay Pagination Runner" },
+    subject,
+    text,
+    html,
+  });
+}
+
+function normalizeClayEmail(value: string | undefined): string {
+  const email = value?.trim().toLowerCase() ?? "";
+  if (!/^[^\s@]+@clay\.com$/.test(email)) {
+    throw new HttpError(400, "Runner tokens can only be emailed to a clay.com address");
+  }
+  return email;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function validateConfigInput(config: RunnerConfig | undefined, env: Env): asserts config is RunnerConfig {

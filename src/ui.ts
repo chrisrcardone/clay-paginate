@@ -459,6 +459,12 @@ export function renderApp(basePath = ""): string {
       background: var(--action);
     }
     button.primary:hover:not(:disabled) { background: var(--action-hover); }
+    button.danger {
+      color: #fff;
+      border-color: var(--danger);
+      background: var(--danger);
+    }
+    button.danger:hover:not(:disabled) { filter: brightness(0.94); }
     button:disabled {
       opacity: 0.55;
       cursor: not-allowed;
@@ -995,6 +1001,23 @@ export function renderApp(basePath = ""): string {
                 <div class="actions"><button id="detailCopyBtn" type="button">Copy URL</button><button id="detailCopySetupBtn" type="button">Copy Clay setup</button></div>
               </div>
               <div id="detailClaySetup" class="notice"></div>
+              <div class="notice warning">
+                <strong>Runner access token</strong>
+                <div class="hint">Tokens are only emailed to <code>@clay.com</code> addresses. The token is not shown in the app and is never forwarded to the upstream API.</div>
+                <div id="runnerTokenMeta" class="hint"></div>
+                <div class="grid-2">
+                  <label><span class="label-row">Clay email <span class="help" tabindex="0" data-tooltip="Only clay.com email addresses can receive runner tokens.">?</span></span><input id="runnerTokenEmail" type="email" autocomplete="off" placeholder="name@clay.com"></label>
+                  <div class="actions" style="align-self:end;"><button id="emailRunnerTokenBtn" type="button">Email token</button><button id="generateRunnerTokenBtn" type="button">Generate and email token</button></div>
+                </div>
+                <div class="notice locked">
+                  <strong>Regeneration warnings</strong>
+                  <div>Regenerating replaces the token for this runner. Clay Signals and workflows using the old token will fail until each one is updated. Do this only during a planned change window.</div>
+                  <label><span class="label-row">Confirmation phrase</span><input id="runnerTokenConfirm" autocomplete="off" placeholder="Type REGENERATE RUNNER TOKEN"></label>
+                  <label class="label-row"><input id="runnerTokenAck" type="checkbox"> I understand this can offline active Signals using the current token.</label>
+                  <div class="actions"><button id="regenerateRunnerTokenBtn" class="danger" type="button">Regenerate and email new token</button></div>
+                </div>
+                <div id="runnerTokenStatus" class="status"></div>
+              </div>
               <div class="link-row">
                 <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/index.ts" target="_blank" rel="noreferrer">Worker routes</a>
                 <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/pagination.ts" target="_blank" rel="noreferrer">Pagination logic</a>
@@ -2331,6 +2354,27 @@ export function renderApp(basePath = ""): string {
       $("claySetup").textContent = buildClaySetup(url, config);
     }
 
+    function renderRunnerTokenStatus(status) {
+      const meta = $("runnerTokenMeta");
+      const emailBtn = $("emailRunnerTokenBtn");
+      const generateBtn = $("generateRunnerTokenBtn");
+      const exists = Boolean(status?.exists);
+      emailBtn.hidden = !exists;
+      generateBtn.hidden = exists;
+      const parts = [];
+      parts.push(exists ? "Token generated." : "No runner token generated yet.");
+      if (status?.emailedAt) parts.push("Last emailed " + formatFullTimestamp(status.emailedAt) + ".");
+      if (status?.rotatedAt) parts.push("Last regenerated " + formatFullTimestamp(status.rotatedAt) + ".");
+      meta.textContent = parts.join(" ");
+      $("runnerTokenStatus").textContent = "";
+      $("runnerTokenStatus").className = "status";
+    }
+
+    function setRunnerTokenStatus(message, ok = true) {
+      $("runnerTokenStatus").textContent = message;
+      $("runnerTokenStatus").className = "status " + (ok ? "ok" : "err");
+    }
+
     async function openDetails(id) {
       const loadingId = state.view === "details" ? "detailLoading" : "listLoading";
       setLoadingLine(loadingId, true, "Loading runner details...");
@@ -2350,6 +2394,7 @@ export function renderApp(basePath = ""): string {
         $("detailMaxPages").textContent = detail.config.pagination?.maxPages || "";
         $("detailPageSize").textContent = detail.config.pagination?.pageSize || "Not set";
         $("detailShapeMode").textContent = detail.config.responseShape?.mode || "raw";
+        renderRunnerTokenStatus(detail.runnerToken);
         showView("details");
         await refreshAnalytics();
       } finally {
@@ -2369,6 +2414,53 @@ export function renderApp(basePath = ""): string {
         renderAnalytics(body.analytics);
       } finally {
         setLoadingLine("analyticsLoading", false);
+      }
+    }
+
+    async function emailRunnerToken(generateIfMissing = false) {
+      if (!state.id) return;
+      const email = $("runnerTokenEmail").value.trim();
+      if (!email) {
+        setRunnerTokenStatus("Enter a clay.com email address first.", false);
+        return;
+      }
+      const buttonId = generateIfMissing ? "generateRunnerTokenBtn" : "emailRunnerTokenBtn";
+      setRunnerTokenStatus(generateIfMissing ? "Generating and emailing token..." : "Emailing token...");
+      setButtonBusy(buttonId, true, generateIfMissing ? "Generating" : "Emailing");
+      try {
+        const body = await api("/api/configs/" + state.id + "/runner-token/email", {
+          method: "POST",
+          body: JSON.stringify({ email, generateIfMissing })
+        });
+        renderRunnerTokenStatus(body.runnerToken);
+        setRunnerTokenStatus("Runner token emailed to " + body.recipient + ".");
+      } finally {
+        setButtonBusy(buttonId, false);
+      }
+    }
+
+    async function regenerateRunnerToken() {
+      if (!state.id) return;
+      const email = $("runnerTokenEmail").value.trim();
+      const confirmation = $("runnerTokenConfirm").value.trim();
+      const acknowledgeOffline = $("runnerTokenAck").checked;
+      if (!email) {
+        setRunnerTokenStatus("Enter a clay.com email address first.", false);
+        return;
+      }
+      setRunnerTokenStatus("Regenerating token...");
+      setButtonBusy("regenerateRunnerTokenBtn", true, "Regenerating");
+      try {
+        const body = await api("/api/configs/" + state.id + "/runner-token/regenerate", {
+          method: "POST",
+          body: JSON.stringify({ email, confirmation, acknowledgeOffline })
+        });
+        $("runnerTokenConfirm").value = "";
+        $("runnerTokenAck").checked = false;
+        renderRunnerTokenStatus(body.runnerToken);
+        setRunnerTokenStatus("New runner token emailed to " + body.recipient + ". Update every active Clay Signal using the old token.");
+      } finally {
+        setButtonBusy("regenerateRunnerTokenBtn", false);
       }
     }
 
@@ -2522,6 +2614,9 @@ export function renderApp(basePath = ""): string {
       action.catch((error) => handleUiError(error, "Refresh", { showLastError: state.view === "create" }));
     });
     $("analyticsRefreshBtn").addEventListener("click", () => refreshAnalytics().catch((error) => handleUiError(error, "Loading analytics", { showLastError: false })));
+    $("emailRunnerTokenBtn").addEventListener("click", () => emailRunnerToken(false).catch((error) => handleUiError(error, "Emailing runner token", { showLastError: false })));
+    $("generateRunnerTokenBtn").addEventListener("click", () => emailRunnerToken(true).catch((error) => handleUiError(error, "Generating runner token", { showLastError: false })));
+    $("regenerateRunnerTokenBtn").addEventListener("click", () => regenerateRunnerToken().catch((error) => handleUiError(error, "Regenerating runner token", { showLastError: false })));
     $("addStaticHeader").addEventListener("click", () => { addHeaderRow("staticHeaders"); markConfigDirty(); });
     $("addCredentialHeader").addEventListener("click", () => { addHeaderRow("credentialHeaders"); markConfigDirty(); });
     $("paginationType").addEventListener("change", () => { updatePaginationFields(); markConfigDirty(); });
