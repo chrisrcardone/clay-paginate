@@ -340,6 +340,20 @@ describe("security controls", () => {
     expect(response.status).toBe(401);
   });
 
+  it("does not expose config detail usage notes without valid admin auth", async () => {
+    const response = await worker.fetch(
+      request("/api/configs/runner-id", {
+        headers: { "x-admin-token": "wrong-token" },
+      }),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }) }),
+    );
+
+    const bodyText = await response.text();
+    expect(response.status).toBe(401);
+    expect(bodyText).not.toContain("usageNotes");
+    expect(bodyText).not.toContain("workspace");
+  });
+
   it("adds manual runner usage notes for token-rotation coordination", async () => {
     const response = await worker.fetch(
       request("/api/configs/runner-id/usage-notes", {

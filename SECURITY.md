@@ -22,7 +22,7 @@ The D1 database does not store:
 - Page-by-page debug traces from tests
 - Token email recipients
 
-Workspace usage notes are manual admin notation for token-rotation coordination. They are never populated from Clay runtime calls and should not contain credentials.
+Workspace usage notes are manual admin notation for token-rotation coordination. They are returned only from admin-authenticated APIs after `x-admin-token` validation, are never exposed through public runner URLs, are never populated from Clay runtime calls, and should not contain credentials.
 
 ## Credentials
 
