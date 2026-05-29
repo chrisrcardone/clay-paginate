@@ -1,5 +1,5 @@
 import { getByPath, toArray } from "./jsonPath";
-import { isCrossHostNext } from "./security";
+import { assertSafeUpstreamUrl, isCrossHostNext } from "./security";
 import type {
   DetectionResult,
   FieldMapping,
@@ -46,6 +46,7 @@ export interface RunOptions {
   incomingBody?: string;
   extraHeaders?: HeaderPair[];
   testMode?: boolean;
+  allowedUpstreamHosts?: string;
   fetcher?: typeof fetch;
   sleeper?: (ms: number) => Promise<void>;
 }
@@ -66,8 +67,10 @@ export async function runPagination(config: RunnerConfig, options: RunOptions = 
   const started = Date.now();
   const fetcher = options.fetcher ?? fetch;
   const sleeper = options.sleeper ?? sleep;
+  assertSafeUpstreamUrl(config.targetUrl, options.allowedUpstreamHosts);
   const normalized = normalizeConfig(config, options.testMode);
   const placeholderContext = resolveUrlPlaceholders(normalized.targetUrl, options.incomingQuery);
+  assertSafeUpstreamUrl(placeholderContext.targetUrl, options.allowedUpstreamHosts);
   const passthroughQuery = removeConsumedQueryParams(options.incomingQuery, placeholderContext.consumedParams);
   const state: PageState = {
     pageNumber: normalized.pagination.startPage ?? 1,
@@ -211,8 +214,10 @@ export async function runPagination(config: RunnerConfig, options: RunOptions = 
 
 export async function detectFromFirstResponse(config: RunnerConfig, options: RunOptions = {}): Promise<DetectionResult> {
   const fetcher = options.fetcher ?? fetch;
+  assertSafeUpstreamUrl(config.targetUrl, options.allowedUpstreamHosts);
   const normalized = normalizeConfig(config, true);
   const placeholderContext = resolveUrlPlaceholders(normalized.targetUrl, options.incomingQuery);
+  assertSafeUpstreamUrl(placeholderContext.targetUrl, options.allowedUpstreamHosts);
   const passthroughQuery = removeConsumedQueryParams(options.incomingQuery, placeholderContext.consumedParams);
   const state: PageState = {
     pageNumber: normalized.pagination.startPage ?? 1,

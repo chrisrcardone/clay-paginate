@@ -191,6 +191,36 @@ describe("pagination runner", () => {
     expect(result.truncated).toBe(true);
   });
 
+  it("rejects authority placeholders before resolving or fetching", async () => {
+    const fetcher = async (): Promise<Response> => {
+      throw new Error("fetch should not be called");
+    };
+
+    await expect(
+      runPagination(
+        { ...baseConfig, targetUrl: "https://{{host}}/items" },
+        { fetcher, incomingQuery: new URLSearchParams("host=169.254.169.254") },
+      ),
+    ).rejects.toThrow("URL placeholders are only allowed");
+  });
+
+  it("re-validates resolved placeholder URLs against the upstream allowlist", async () => {
+    const fetcher = async (): Promise<Response> => {
+      throw new Error("fetch should not be called");
+    };
+
+    await expect(
+      runPagination(
+        { ...baseConfig, targetUrl: "https://api.example.com/items?tenant={{tenant}}" },
+        {
+          fetcher,
+          incomingQuery: new URLSearchParams("tenant=acme"),
+          allowedUpstreamHosts: "data.g2.com",
+        },
+      ),
+    ).rejects.toThrow("Upstream host is not in the allowed host list");
+  });
+
   it("applies delay between pages without saving trace data", async () => {
     const sleeps: number[] = [];
     const fetcher = async (input: RequestInfo | URL): Promise<Response> => {
@@ -273,5 +303,18 @@ describe("auto detection", () => {
     expect(detection.detected.nextLinkPath).toBe("links.next");
     expect(detection.detected.totalPagesPath).toBe("meta.page_count");
     expect(detection.page.itemCount).toBe(1);
+  });
+
+  it("applies the same upstream safety checks during detection", async () => {
+    const fetcher = async (): Promise<Response> => {
+      throw new Error("fetch should not be called");
+    };
+
+    await expect(
+      detectFromFirstResponse(
+        { ...baseConfig, targetUrl: "https://{{host}}/items" },
+        { fetcher, incomingQuery: new URLSearchParams("host=127.0.0.1") },
+      ),
+    ).rejects.toThrow("URL placeholders are only allowed");
   });
 });

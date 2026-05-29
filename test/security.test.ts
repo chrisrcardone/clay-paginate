@@ -80,6 +80,34 @@ describe("security controls", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects URL placeholders in the target authority", async () => {
+    const response = await worker.fetch(
+      request("/api/test", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({ config: { ...baseConfig, targetUrl: "https://{{host}}/items" }, queryString: "host=example.com" }),
+      }),
+      env(),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "security_validation_failed" });
+  });
+
+  it("enforces the optional upstream host allowlist before proxying", async () => {
+    const response = await worker.fetch(
+      request("/api/test", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({ config: { ...baseConfig, targetUrl: "https://example.com/items" } }),
+      }),
+      env({ ALLOWED_UPSTREAM_HOSTS: "api.example.com" }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "security_validation_failed" });
+  });
+
   it("rejects static credential headers", async () => {
     const response = await worker.fetch(
       request("/api/test", {
@@ -114,6 +142,17 @@ describe("security controls", () => {
     const response = await worker.fetch(
       request("/runner-id", {
         headers: { "cf-connecting-ip": "198.51.100.10" },
+      }),
+      env({ ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it("does not trust spoofable x-forwarded-for for public runner CIDR checks", async () => {
+    const response = await worker.fetch(
+      request("/runner-id", {
+        headers: { "x-forwarded-for": "203.0.113.10" },
       }),
       env({ ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
     );

@@ -2,6 +2,7 @@ import type { HeaderPair } from "./types";
 
 const ALLOWED_METHODS = new Set(["GET", "POST", "PUT", "PATCH"]);
 const PLACEHOLDER_PATTERN = /{{\s*([A-Za-z0-9_.-]+)\s*}}/g;
+const AUTHORITY_PLACEHOLDER_PATTERN = /{{\s*[A-Za-z0-9_.-]+\s*}}/;
 
 export function assertAllowedMethod(method: string | undefined): void {
   if (!method || !ALLOWED_METHODS.has(method.toUpperCase())) {
@@ -10,6 +11,7 @@ export function assertAllowedMethod(method: string | undefined): void {
 }
 
 export function assertSafeUpstreamUrl(rawUrl: string, allowedHostsList?: string): void {
+  assertNoAuthorityPlaceholders(rawUrl);
   let url: URL;
   try {
     url = new URL(maskPlaceholders(rawUrl));
@@ -28,6 +30,13 @@ export function assertSafeUpstreamUrl(rawUrl: string, allowedHostsList?: string)
   const allowedHosts = parseList(allowedHostsList);
   if (allowedHosts.length > 0 && !matchesAllowedHost(hostname, allowedHosts)) {
     throw new SecurityValidationError("Upstream host is not in the allowed host list");
+  }
+}
+
+function assertNoAuthorityPlaceholders(rawUrl: string): void {
+  const authority = rawUrl.trim().match(/^[A-Za-z][A-Za-z0-9+.-]*:\/\/([^/?#]*)/)?.[1] ?? "";
+  if (AUTHORITY_PLACEHOLDER_PATTERN.test(authority)) {
+    throw new SecurityValidationError("URL placeholders are only allowed in the path or query string, not the scheme, host, port, username, or password");
   }
 }
 

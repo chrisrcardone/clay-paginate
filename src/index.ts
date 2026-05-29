@@ -187,7 +187,7 @@ function constantTimeEqual(left: string, right: string): boolean {
 }
 
 function getClientIp(request: Request): string | null {
-  return request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+  return request.headers.get("cf-connecting-ip");
 }
 
 async function handleTest(request: Request, env: Env): Promise<Response> {
@@ -199,6 +199,7 @@ async function handleTest(request: Request, env: Env): Promise<Response> {
     incomingQuery: query,
     incomingBody: body.body,
     testMode: true,
+    allowedUpstreamHosts: env.ALLOWED_UPSTREAM_HOSTS,
   });
 
   if (body.config.id) {
@@ -237,6 +238,7 @@ async function handleDetect(request: Request, env: Env): Promise<Response> {
     incomingQuery: query,
     incomingBody: body.body,
     testMode: true,
+    allowedUpstreamHosts: env.ALLOWED_UPSTREAM_HOSTS,
   });
   return json({ ok: true, detection });
 }
@@ -288,6 +290,7 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
       incomingHeaders: request.headers,
       incomingQuery: requestUrl.searchParams,
       incomingBody: body,
+      allowedUpstreamHosts: env.ALLOWED_UPSTREAM_HOSTS,
     });
 
     await logRun(env.DB, {
