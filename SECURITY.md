@@ -55,3 +55,16 @@ The HTML shell includes `Content-Security-Policy`, `X-Content-Type-Options: nosn
 ## Deployment access
 
 The app is designed for a trusted deployment path. Put `https://paginate.chris-apis.xyz` behind Cloudflare Access or another edge access rule for the UI/admin surface when possible. The Clay-facing generated URLs under `https://paginate.chris-apis.xyz/<config-id>` must remain reachable by Clay, because Clay authenticates to the upstream API through pass-through headers or URL placeholders. Protect those public runner URLs with per-runner tokens, `ALLOWED_RUN_CIDRS`, or both depending on the Clay product surface.
+
+## Production hardening checklist
+
+- Keep `workers_dev` and preview URLs disabled; production should be reachable only on `paginate.chris-apis.xyz`.
+- Keep `ADMIN_TOKEN` set to a 32+ character random value and store it in Clay 1Password.
+- Keep `RUNNER_TOKEN_ENCRYPTION_KEY` configured before generating per-runner tokens.
+- Keep `RUN_RL` and `ADMIN_RL` rate-limit bindings deployed; current defaults are 100 runner calls/minute and 20 failed admin attempts/minute per caller.
+- Keep `RUN_METRICS` bound to the `clay_paginate_runs` Analytics Engine dataset for best-effort operational metrics.
+- Use `ALLOWED_UPSTREAM_HOSTS` when the expected upstream API hosts are known.
+- Use `ALLOWED_RUN_CIDRS` only for Clay surfaces with static IP support; use per-runner `x-clay-paginate-token` for Clay surfaces without static IP support.
+- Put the UI and admin API surface behind Cloudflare Access or an equivalent edge rule when practical.
+- Configure D1 usage/billing alerts in Cloudflare.
+- After deploy, smoke test `/api/configs` without a token returns `401`, the workers.dev host returns `404`, and non-UUID runner paths return `404`.
