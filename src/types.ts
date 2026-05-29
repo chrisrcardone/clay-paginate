@@ -1,5 +1,8 @@
 export interface Env {
   DB: D1Database;
+  ADMIN_TOKEN?: string;
+  ALLOWED_RUN_CIDRS?: string;
+  ALLOWED_UPSTREAM_HOSTS?: string;
 }
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH";

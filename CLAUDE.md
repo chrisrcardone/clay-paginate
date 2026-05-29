@@ -22,6 +22,9 @@ When helping configure a runner for a user:
 When changing code:
 
 - Keep the UI simple and field-focused.
+- Preserve fail-closed admin API auth with `ADMIN_TOKEN`.
+- Preserve HTTPS/private-host upstream validation and cross-host next-link blocking.
+- Preserve optional `ALLOWED_RUN_CIDRS` support for Clay static IP restrictions.
 - Keep analytics metadata-only.
 - Preserve immutable saved configurations.
 - Preserve generated URL stability.

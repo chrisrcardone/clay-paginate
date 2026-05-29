@@ -1,4 +1,5 @@
 import { getByPath, toArray } from "./jsonPath";
+import { isCrossHostNext } from "./security";
 import type {
   DetectionResult,
   FieldMapping,
@@ -18,6 +19,8 @@ const RETRYABLE_STATUSES = new Set([408, 429, 500, 502, 503, 504]);
 const MAX_TIMEOUT_MS = 55000;
 const MAX_DELAY_MS = 10000;
 const MAX_RETRY_ATTEMPTS = 5;
+const DEFAULT_MAX_RESPONSE_BYTES = 10_000_000;
+const MAX_RESPONSE_BYTES_LIMIT = 25_000_000;
 
 export class UpstreamError extends Error {
   constructor(
@@ -99,11 +102,19 @@ export async function runPagination(config: RunnerConfig, options: RunOptions = 
     }
     seenRequestUrls.add(requestMarker);
 
-    const init = buildFetchInit(normalized, options);
+    const init = buildFetchInit(normalized, options, requestUrl.host === new URL(placeholderContext.targetUrl).host);
     const pageStarted = Date.now();
     const { response, retryCount } = await fetchWithTimeout(fetcher, requestUrl.toString(), init, normalized.rateLimit);
     totalRetryCount += retryCount;
     upstreamStatus = response.status;
+
+    const contentLength = Number(response.headers.get("content-length"));
+    const maxResponseBytes = normalized.stopConditions?.maxResponseBytes;
+    if (maxResponseBytes && Number.isFinite(contentLength) && totalResponseBytes + contentLength > maxResponseBytes) {
+      truncated = true;
+      stopReason = "max_response_bytes";
+      throw new UpstreamError("Upstream response exceeded max response bytes", 502, "");
+    }
 
     const rawBody = await response.text();
     const responseBytes = byteLength(rawBody);
@@ -120,16 +131,19 @@ export async function runPagination(config: RunnerConfig, options: RunOptions = 
     items.push(...shapeItems(batch, normalized));
 
     const next = getNextState(normalized, state, requestUrl, response.headers, json, batch.length);
-    const pageStopReason = getPageStopReason({
-      batchLength: batch.length,
-      duplicateDetected,
-      hasNext: next.hasNext,
-      normalized,
-      nextMarker: getNextMarker(next),
-      seenNextMarkers,
-      started,
-      totalResponseBytes,
-    });
+    const crossHostNextBlocked = Boolean(next.nextUrl && isCrossHostNext(placeholderContext.targetUrl, next.nextUrl));
+    const pageStopReason = crossHostNextBlocked
+      ? "cross_host_next_blocked"
+      : getPageStopReason({
+        batchLength: batch.length,
+        duplicateDetected,
+        hasNext: next.hasNext,
+        normalized,
+        nextMarker: getNextMarker(next),
+        seenNextMarkers,
+        started,
+        totalResponseBytes,
+      });
     if (pageStopReason) {
       stopReason = pageStopReason;
       truncated = pageStopReason !== "completed";
@@ -210,7 +224,7 @@ export async function detectFromFirstResponse(config: RunnerConfig, options: Run
   const { response, retryCount } = await fetchWithTimeout(
     fetcher,
     requestUrl.toString(),
-    buildFetchInit(normalized, options),
+    buildFetchInit(normalized, options, true),
     normalized.rateLimit,
   );
   const rawBody = await response.text();
@@ -253,7 +267,7 @@ export function normalizeConfig(config: RunnerConfig, testMode = false): RunnerC
     ...config,
     name: config.name?.trim() || "Untitled runner",
     targetUrl: normalizeTargetUrl(config.targetUrl),
-    method: config.method || "GET",
+    method: (config.method || "GET").toUpperCase() as RunnerConfig["method"],
     resultPath: config.resultPath?.trim() || "data",
     responseMode: config.responseMode || "array",
     staticHeaders: cleanHeaderPairs(config.staticHeaders),
@@ -283,9 +297,9 @@ export function normalizeConfig(config: RunnerConfig, testMode = false): RunnerC
       maxDurationMs: config.stopConditions?.maxDurationMs
         ? clampNumber(config.stopConditions.maxDurationMs, 0, 1000, 290000)
         : undefined,
-      maxResponseBytes: config.stopConditions?.maxResponseBytes
-        ? clampNumber(config.stopConditions.maxResponseBytes, 0, 1024, 50_000_000)
-        : undefined,
+      maxResponseBytes: config.stopConditions?.maxResponseBytes === undefined
+        ? DEFAULT_MAX_RESPONSE_BYTES
+        : clampNumber(config.stopConditions.maxResponseBytes, DEFAULT_MAX_RESPONSE_BYTES, 1024, MAX_RESPONSE_BYTES_LIMIT),
     },
     rateLimit: {
       delayMs: config.rateLimit?.delayMs ? clampNumber(config.rateLimit.delayMs, 0, 0, MAX_DELAY_MS) : 0,
@@ -508,17 +522,19 @@ export function buildPageUrl(
   return url;
 }
 
-function buildFetchInit(config: RunnerConfig, options: RunOptions): RequestInit {
+function buildFetchInit(config: RunnerConfig, options: RunOptions, forwardPassThroughHeaders: boolean): RequestInit {
   const headers = new Headers();
 
   for (const header of config.staticHeaders) {
     headers.set(header.name, header.value);
   }
 
-  for (const name of config.passThroughHeaders) {
-    const incomingValue = options.incomingHeaders?.get(name);
-    if (incomingValue) {
-      headers.set(name, incomingValue);
+  if (forwardPassThroughHeaders) {
+    for (const name of config.passThroughHeaders) {
+      const incomingValue = options.incomingHeaders?.get(name);
+      if (incomingValue) {
+        headers.set(name, incomingValue);
+      }
     }
   }
 

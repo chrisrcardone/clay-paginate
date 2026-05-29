@@ -727,6 +727,12 @@ export function renderApp(basePath = ""): string {
         <button id="newBtn" class="primary" type="button">Create New Runner</button>
       </div>
       <div id="listStatus" class="status"></div>
+      <div class="notice">
+        <div class="grid-2">
+          <label><span class="label-row">Admin token <span class="help" tabindex="0" data-tooltip="Required for creating, testing, listing, and viewing runner configs. It is stored only in this browser's local storage and sent as x-admin-token.">?</span></span><input id="adminToken" type="password" autocomplete="off" placeholder="Paste admin token"></label>
+          <div class="actions" style="align-self:end;"><button id="saveAdminTokenBtn" type="button">Save token</button><button id="clearAdminTokenBtn" type="button">Clear token</button><span id="adminTokenStatus" class="hint"></span></div>
+        </div>
+      </div>
       <div id="listLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading saved runners...</span></div>
       <div class="overview">
         <div class="overview-card"><div class="overview-icon">A</div><div><span>Active runners</span><strong id="overviewRunnerCount">0</strong></div></div>
@@ -1045,6 +1051,7 @@ export function renderApp(basePath = ""): string {
 
   <script>
     const BASE_PATH = ${JSON.stringify(basePath)};
+    const ADMIN_TOKEN_STORAGE_KEY = "clay-pagination-admin-token";
     const state = { id: null, locked: false, view: "list", step: "ai", lastTestOk: false, configs: [], detailRunUrl: "" };
     const $ = (id) => document.getElementById(id);
     const editableIds = ["name","method","targetUrl","resultPath","responseMode","maxItems","paginationType","maxPages","pageSize","pageParam","pageSizeParam","startPage","nextLinkPath","totalPagesPath","offsetParam","limitParam","startOffset","cursorParam","nextCursorPath","initialCursor","shapeMode","shapeFields","delayMs","retryAttempts","timeoutMs","retryStatuses","maxDurationMs","maxResponseBytes","respectRetryAfter","stopOnEmptyPage","stopOnRepeatedNext","stopOnDuplicateItemId","itemIdPath","passThroughHeaders","bodyTemplate"];
@@ -1128,9 +1135,14 @@ export function renderApp(basePath = ""): string {
     };
 
     async function api(path, options = {}) {
+      const adminToken = localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY) || "";
       const response = await fetch(BASE_PATH + path, {
         ...options,
-        headers: { "content-type": "application/json", ...(options.headers || {}) }
+        headers: {
+          "content-type": "application/json",
+          ...(adminToken ? { "x-admin-token": adminToken } : {}),
+          ...(options.headers || {})
+        }
       });
       const text = await response.text();
       let body = null;
@@ -1234,6 +1246,17 @@ export function renderApp(basePath = ""): string {
     function setAiObjectStatus(message, ok = true) {
       $("aiObjectStatus").textContent = message;
       $("aiObjectStatus").style.color = ok ? "var(--secondary)" : "var(--danger)";
+    }
+
+    function setAdminTokenStatus(message, ok = true) {
+      $("adminTokenStatus").textContent = message;
+      $("adminTokenStatus").style.color = ok ? "var(--secondary)" : "var(--danger)";
+    }
+
+    function hydrateAdminTokenState() {
+      const saved = Boolean(localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY));
+      $("adminToken").placeholder = saved ? "Admin token saved in this browser" : "Paste admin token";
+      setAdminTokenStatus(saved ? "Token saved." : "Token required for admin actions.");
     }
 
     function showView(view) {
@@ -2445,6 +2468,23 @@ export function renderApp(basePath = ""): string {
 
     $("newBtn").addEventListener("click", resetCreateFlow);
     $("newBtnSecondary").addEventListener("click", resetCreateFlow);
+    $("saveAdminTokenBtn").addEventListener("click", () => {
+      const token = $("adminToken").value.trim();
+      if (!token) {
+        setAdminTokenStatus("Paste a token first.", false);
+        return;
+      }
+      localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
+      $("adminToken").value = "";
+      hydrateAdminTokenState();
+      refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
+    });
+    $("clearAdminTokenBtn").addEventListener("click", () => {
+      localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
+      $("adminToken").value = "";
+      hydrateAdminTokenState();
+      setAdminTokenStatus("Token cleared.");
+    });
     $("backToListBtn").addEventListener("click", () => {
       refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
       showView("list");
@@ -2530,6 +2570,7 @@ export function renderApp(basePath = ""): string {
     applyConfig(defaults);
     setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
     updateUrlShape();
+    hydrateAdminTokenState();
     refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
   </script>
 </body>

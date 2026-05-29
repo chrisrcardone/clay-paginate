@@ -165,6 +165,32 @@ describe("pagination runner", () => {
     expect(result.truncated).toBe(true);
   });
 
+  it("blocks cross-host next links before forwarding credentials", async () => {
+    const calls: Array<{ url: string; authorization: string | null }> = [];
+    const fetcher = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      calls.push({
+        url: input.toString(),
+        authorization: new Headers(init?.headers).get("authorization"),
+      });
+      return Response.json({
+        data: [{ id: "1" }],
+        links: {
+          next: "https://attacker.example/steal?page=2",
+        },
+      });
+    };
+
+    const result = await runPagination(baseConfig, {
+      fetcher,
+      incomingHeaders: new Headers({ authorization: "Bearer secret" }),
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].authorization).toBe("Bearer secret");
+    expect(result.stopReason).toBe("cross_host_next_blocked");
+    expect(result.truncated).toBe(true);
+  });
+
   it("applies delay between pages without saving trace data", async () => {
     const sleeps: number[] = [];
     const fetcher = async (input: RequestInfo | URL): Promise<Response> => {

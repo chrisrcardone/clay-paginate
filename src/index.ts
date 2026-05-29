@@ -1,4 +1,12 @@
 import { detectFromFirstResponse, MissingPlaceholderError, runPagination, UpstreamError } from "./pagination";
+import {
+  SecurityValidationError,
+  assertAllowedMethod,
+  assertBodyTemplateDoesNotStoreSecrets,
+  assertSafeUpstreamUrl,
+  assertStaticHeadersAreSafe,
+  isCallerIpAllowed,
+} from "./security";
 import { renderApp } from "./ui";
 import {
   DuplicateConfigError,
@@ -14,6 +22,17 @@ import type { Env, HeaderPair, RunnerConfig, TestRequest } from "./types";
 const JSON_HEADERS = {
   "content-type": "application/json; charset=utf-8",
   "cache-control": "no-store",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+};
+
+const HTML_HEADERS = {
+  "content-type": "text/html; charset=utf-8",
+  "cache-control": "no-store",
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "no-referrer",
+  "content-security-policy":
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
 };
 
 const LEGACY_BASE_PATH = "/paginate";
@@ -24,7 +43,7 @@ export default {
     const route = getRoute(url);
 
     if (request.method === "OPTIONS") {
-      return withCors(new Response(null, { status: 204 }));
+      return withSecurityHeaders(new Response(null, { status: 204 }));
     }
 
     try {
@@ -37,33 +56,40 @@ export default {
       }
 
       if (route.appPath === "/api/test" && request.method === "POST") {
+        requireAdmin(request, env);
         return await handleTest(request, env);
       }
 
       if (route.appPath === "/api/detect" && request.method === "POST") {
-        return await handleDetect(request);
+        requireAdmin(request, env);
+        return await handleDetect(request, env);
       }
 
       if (route.appPath === "/api/configs" && request.method === "GET") {
+        requireAdmin(request, env);
         const configs = await listConfigs(env.DB, route.publicBaseUrl(url.origin));
         return json({ configs });
       }
 
       if (route.appPath === "/api/configs" && request.method === "POST") {
+        requireAdmin(request, env);
         return await handleSave(request, env, route.publicBaseUrl(url.origin));
       }
 
       const configMatch = route.appPath.match(/^\/api\/configs\/([^/]+)$/);
       if (configMatch && request.method === "GET") {
+        requireAdmin(request, env);
         return await handleGet(env, configMatch[1], route.publicBaseUrl(url.origin));
       }
 
       if (configMatch && request.method === "DELETE") {
+        requireAdmin(request, env);
         return json({ error: "Saved configurations are immutable and cannot be deleted" }, 405);
       }
 
       const analyticsMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/analytics$/);
       if (analyticsMatch && request.method === "GET") {
+        requireAdmin(request, env);
         return await handleAnalytics(env, analyticsMatch[1]);
       }
 
@@ -127,9 +153,46 @@ function isReadMethod(method: string): boolean {
   return method === "GET" || method === "HEAD";
 }
 
+function requireAdmin(request: Request, env: Env): void {
+  if (!hasValidAdminToken(request, env)) {
+    if (!env.ADMIN_TOKEN) {
+      throw new HttpError(503, "Admin API is not configured");
+    }
+    throw new HttpError(401, "Unauthorized");
+  }
+}
+
+function assertRunCallerAllowed(request: Request, env: Env): void {
+  if (isCallerIpAllowed(getClientIp(request), env.ALLOWED_RUN_CIDRS) || hasValidAdminToken(request, env)) {
+    return;
+  }
+
+  throw new HttpError(403, "Caller IP is not allowed for runner execution");
+}
+
+function hasValidAdminToken(request: Request, env: Env): boolean {
+  const expected = env.ADMIN_TOKEN ?? "";
+  if (!expected) return false;
+  const provided = request.headers.get("x-admin-token") ?? "";
+  return constantTimeEqual(provided, expected);
+}
+
+function constantTimeEqual(left: string, right: string): boolean {
+  const maxLength = Math.max(left.length, right.length);
+  let diff = left.length === right.length ? 0 : 1;
+  for (let index = 0; index < maxLength; index += 1) {
+    diff |= (left.charCodeAt(index) || 0) ^ (right.charCodeAt(index) || 0);
+  }
+  return diff === 0;
+}
+
+function getClientIp(request: Request): string | null {
+  return request.headers.get("cf-connecting-ip") ?? request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+}
+
 async function handleTest(request: Request, env: Env): Promise<Response> {
   const body = await request.json<TestRequest>();
-  validateConfigInput(body.config);
+  validateConfigInput(body.config, env);
   const query = new URLSearchParams(body.queryString ?? "");
   const result = await runPagination(body.config, {
     incomingHeaders: headersFromPairs(body.credentialHeaders ?? []),
@@ -165,9 +228,9 @@ async function handleTest(request: Request, env: Env): Promise<Response> {
   });
 }
 
-async function handleDetect(request: Request): Promise<Response> {
+async function handleDetect(request: Request, env: Env): Promise<Response> {
   const body = await request.json<TestRequest>();
-  validateConfigInput(body.config);
+  validateConfigInput(body.config, env);
   const query = new URLSearchParams(body.queryString ?? "");
   const detection = await detectFromFirstResponse(body.config, {
     incomingHeaders: headersFromPairs(body.credentialHeaders ?? []),
@@ -189,7 +252,7 @@ async function handleAnalytics(env: Env, id: string): Promise<Response> {
 
 async function handleSave(request: Request, env: Env, publicBaseUrl: string): Promise<Response> {
   const body = await request.json<{ config: RunnerConfig }>();
-  validateConfigInput(body.config);
+  validateConfigInput(body.config, env);
   const config = await saveConfig(env.DB, body.config);
   return json({
     config,
@@ -210,10 +273,12 @@ async function handleGet(env: Env, id: string, publicBaseUrl: string): Promise<R
 }
 
 async function handleRun(request: Request, env: Env, id: string): Promise<Response> {
+  assertRunCallerAllowed(request, env);
   const config = await getConfig(env.DB, id);
   if (!config) {
     return json({ error: "Config not found" }, 404);
   }
+  validateConfigInput(config, env);
 
   const requestUrl = new URL(request.url);
   const body = request.method === "POST" ? await request.text() : undefined;
@@ -264,19 +329,24 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
   }
 }
 
-function validateConfigInput(config: RunnerConfig | undefined): asserts config is RunnerConfig {
+function validateConfigInput(config: RunnerConfig | undefined, env: Env): asserts config is RunnerConfig {
   if (!config || typeof config !== "object") {
     throw new HttpError(400, "Missing config");
   }
 
-  if (!config.targetUrl || !/^https?:\/\//i.test(config.targetUrl)) {
-    throw new HttpError(400, "Target URL must be an absolute HTTP URL");
+  if (!config.targetUrl) {
+    throw new HttpError(400, "Target URL is required");
   }
 
+  assertAllowedMethod(config.method);
+  assertSafeUpstreamUrl(config.targetUrl, env.ALLOWED_UPSTREAM_HOSTS);
   assertTargetUrlDoesNotStoreSecrets(config.targetUrl);
+  assertStaticHeadersAreSafe(config.staticHeaders);
+  assertBodyTemplateDoesNotStoreSecrets(config.bodyTemplate);
 
-  if ((config.staticHeaders ?? []).some((header) => isSensitiveHeaderName(header.name))) {
-    throw new HttpError(400, "Credential headers must be pass-through or test-only, not saved as static headers");
+  const invalidPassThrough = (config.passThroughHeaders ?? []).find((header) => !/^[A-Za-z0-9-]+$/.test(header.trim()));
+  if (invalidPassThrough) {
+    throw new HttpError(400, `Invalid pass-through header name "${invalidPassThrough}"`);
   }
 
   if (!config.name || config.name.trim().length < 2) {
@@ -314,24 +384,18 @@ function headersFromPairs(pairs: HeaderPair[]): Headers {
 
 function html(markup: string): Response {
   return new Response(markup, {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store",
-    },
+    headers: HTML_HEADERS,
   });
 }
 
 function htmlHead(): Response {
   return new Response(null, {
-    headers: {
-      "content-type": "text/html; charset=utf-8",
-      "cache-control": "no-store",
-    },
+    headers: HTML_HEADERS,
   });
 }
 
 function json(body: unknown, status = 200): Response {
-  return withCors(
+  return withSecurityHeaders(
     new Response(JSON.stringify(body), {
       status,
       headers: JSON_HEADERS,
@@ -339,11 +403,10 @@ function json(body: unknown, status = 200): Response {
   );
 }
 
-function withCors(response: Response): Response {
+function withSecurityHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
-  headers.set("access-control-allow-origin", "*");
-  headers.set("access-control-allow-methods", "GET,POST,DELETE,OPTIONS");
-  headers.set("access-control-allow-headers", "content-type,authorization,x-api-key,api-key");
+  headers.set("x-content-type-options", "nosniff");
+  headers.set("referrer-policy", "no-referrer");
   return new Response(response.body, { status: response.status, headers });
 }
 
@@ -390,12 +453,12 @@ function handleError(error: unknown): Response {
     return json({ error: error.message, code: "immutable_config" }, 409);
   }
 
+  if (error instanceof SecurityValidationError) {
+    return json({ error: error.message, code: "security_validation_failed" }, 400);
+  }
+
   const message = error instanceof Error ? error.message : "Unknown error";
   return json({ error: message }, 500);
-}
-
-function isSensitiveHeaderName(name: string): boolean {
-  return /^(authorization|proxy-authorization|x-api-key|api-key|apikey|x-auth-token|x-access-token)$/i.test(name.trim());
 }
 
 function getAnalyticsErrorCode(error: unknown): string {

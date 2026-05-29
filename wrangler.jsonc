@@ -23,6 +23,6 @@
     }
   ],
   "secrets": {
-    "required": []
+    "required": ["ADMIN_TOKEN"]
   }
 }

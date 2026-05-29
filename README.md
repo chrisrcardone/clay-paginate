@@ -95,11 +95,20 @@ npx wrangler d1 create clay-pagination-runner-db
 Copy the returned `database_id` into `wrangler.jsonc`, then run:
 
 ```sh
+npx wrangler secret put ADMIN_TOKEN
 npm run db:migrate:remote
 npm run deploy
 ```
 
 The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. Generated Clay URLs use `https://paginate.chris-apis.xyz/<config-id>`.
+
+Admin APIs fail closed unless `ADMIN_TOKEN` is configured. Paste the same token into the app's Admin token field to list, test, create, and inspect runners. The public `/<config-id>` Clay run URLs do not require the admin token by default because Clay needs to call them directly.
+
+Optional production hardening:
+
+- `ALLOWED_RUN_CIDRS`: comma-separated CIDRs allowed to call public runner URLs. Use this with Clay's static IP ranges when available, for example `203.0.113.10/32,203.0.113.11/32`. Admin token calls bypass this for operator smoke tests.
+- `ALLOWED_UPSTREAM_HOSTS`: comma-separated upstream host allowlist, supporting exact hosts and wildcards like `data.g2.com,*.example.com`.
+- Cloudflare Access: recommended for the UI/admin surface. Keep public runner URLs reachable by Clay, or pair them with `ALLOWED_RUN_CIDRS`.
 
 ## Privacy model
 
@@ -114,6 +123,9 @@ The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. G
 
 - Saved runner URLs are immutable and stable.
 - The runner caps pagination with `maxPages` and optional `maxItems`; `maxPages` is a safety cap, not a requested page count, and pagination stops naturally when the API has no next page.
+- Upstream URLs must use HTTPS and cannot target loopback, private, link-local, `.local`, or `.internal` hosts.
+- JSON:API and Link-header next links are pinned to the original upstream host; cross-host next links stop the run before credentials can be forwarded.
+- Default response-size protection caps runs at 10 MB unless configured lower or higher within the Worker limit.
 - GET page fetches retry short transient failures such as 429 and 5xx.
 - Stop conditions protect against empty-page loops, repeated next links or cursors, duplicate item IDs, max duration, and max response size.
 - Rate controls support page delays, retry attempts, retry statuses, `Retry-After`, and per-page timeout.

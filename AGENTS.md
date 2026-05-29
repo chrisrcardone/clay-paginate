@@ -16,6 +16,10 @@ This project is for non-technical users configuring paginated APIs for Clay HTTP
 
 ## Safety Invariants
 
+- Keep admin APIs protected by fail-closed `ADMIN_TOKEN` auth.
+- Keep public runner URLs separate from admin APIs; use `ALLOWED_RUN_CIDRS` for Clay static IP restrictions.
+- Keep upstream URL validation in place: HTTPS only, private-host blocking, and optional host allowlisting.
+- Keep next-link host pinning so pass-through credentials never follow a cross-host pagination link.
 - Do not store API credentials.
 - Do not store Clay call payloads or upstream response data.
 - Do not store page debug traces, auto-detect responses, shaped rows, or upstream error bodies.
