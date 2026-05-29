@@ -1,4 +1,4 @@
-import { MissingPlaceholderError, runPagination, UpstreamError } from "./pagination";
+import { detectFromFirstResponse, MissingPlaceholderError, runPagination, UpstreamError } from "./pagination";
 import { renderApp } from "./ui";
 import {
   DuplicateConfigError,
@@ -38,6 +38,10 @@ export default {
 
       if (route.appPath === "/api/test" && request.method === "POST") {
         return await handleTest(request, env);
+      }
+
+      if (route.appPath === "/api/detect" && request.method === "POST") {
+        return await handleDetect(request);
       }
 
       if (route.appPath === "/api/configs" && request.method === "GET") {
@@ -135,6 +139,8 @@ async function handleTest(request: Request, env: Env): Promise<Response> {
       itemCount: result.items.length,
       durationMs: result.durationMs,
       upstreamStatus: result.upstreamStatus,
+      stopReason: result.stopReason,
+      retryCount: result.retryCount,
     });
   }
 
@@ -144,9 +150,24 @@ async function handleTest(request: Request, env: Env): Promise<Response> {
     pageCount: result.pages.length,
     durationMs: result.durationMs,
     truncated: result.truncated,
+    stopReason: result.stopReason,
+    retryCount: result.retryCount,
     pages: result.pages,
     sample: result.items.slice(0, 10),
   });
+}
+
+async function handleDetect(request: Request): Promise<Response> {
+  const body = await request.json<TestRequest>();
+  validateConfigInput(body.config);
+  const query = new URLSearchParams(body.queryString ?? "");
+  const detection = await detectFromFirstResponse(body.config, {
+    incomingHeaders: headersFromPairs(body.credentialHeaders ?? []),
+    incomingQuery: query,
+    incomingBody: body.body,
+    testMode: true,
+  });
+  return json({ ok: true, detection });
 }
 
 async function handleAnalytics(env: Env, id: string): Promise<Response> {
@@ -204,6 +225,8 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
       itemCount: result.items.length,
       durationMs: result.durationMs,
       upstreamStatus: result.upstreamStatus,
+      stopReason: result.stopReason,
+      retryCount: result.retryCount,
     });
 
     if (config.responseMode === "envelope") {
@@ -214,6 +237,8 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
           pageCount: result.pages.length,
           durationMs: result.durationMs,
           truncated: result.truncated,
+          stopReason: result.stopReason,
+          retryCount: result.retryCount,
         },
       });
     }
@@ -240,6 +265,8 @@ function validateConfigInput(config: RunnerConfig | undefined): asserts config i
     throw new HttpError(400, "Target URL must be an absolute HTTP URL");
   }
 
+  assertTargetUrlDoesNotStoreSecrets(config.targetUrl);
+
   if ((config.staticHeaders ?? []).some((header) => isSensitiveHeaderName(header.name))) {
     throw new HttpError(400, "Credential headers must be pass-through or test-only, not saved as static headers");
   }
@@ -247,6 +274,24 @@ function validateConfigInput(config: RunnerConfig | undefined): asserts config i
   if (!config.name || config.name.trim().length < 2) {
     throw new HttpError(400, "Name is required");
   }
+}
+
+function assertTargetUrlDoesNotStoreSecrets(targetUrl: string): void {
+  const url = new URL(targetUrl.replace(/{{\s*([A-Za-z0-9_.-]+)\s*}}/g, "placeholder"));
+  for (const [key, value] of url.searchParams.entries()) {
+    if (isSensitiveQueryParamName(key) && value && !/^placeholder$/i.test(value)) {
+      throw new HttpError(
+        400,
+        `Target URL appears to contain a credential in "${key}". Use a placeholder like {{${key}}} and pass the value at run time.`,
+      );
+    }
+  }
+}
+
+function isSensitiveQueryParamName(name: string): boolean {
+  return /^(api[_-]?key|apikey|key|token|access[_-]?token|auth[_-]?token|authorization|credential|client[_-]?secret|secret|password)$/i.test(
+    name.trim(),
+  );
 }
 
 function headersFromPairs(pairs: HeaderPair[]): Headers {

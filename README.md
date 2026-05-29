@@ -23,9 +23,9 @@ AI assistants can also use these repo files directly:
 
 ## What gets stored
 
-The Worker stores target URL, method, headers that are safe to persist, pass-through header names, result path, and pagination behavior. Test credentials are not stored. Clay should send the upstream API credential header on each request, and the Worker forwards only the configured pass-through headers.
+The Worker stores target URL, method, headers that are safe to persist, pass-through header names, result path, pagination behavior, stop conditions, rate-limit controls, and response shaping rules. Test credentials are not stored. Clay should send the upstream API credential header on each request, and the Worker forwards only the configured pass-through headers.
 
-Analytics are metadata-only and stored against each configuration: run mode, status, page count, item count, duration, upstream status code, timestamp, and coarse error code. The Worker does not persist Clay headers, query params, request bodies, upstream URLs, upstream response bodies, upstream error bodies, or returned rows.
+Analytics are metadata-only and stored against each configuration: run mode, status, page count, item count, duration, upstream status code, stop reason, retry count, timestamp, and coarse error code. The Worker does not persist Clay headers, query params, request bodies, upstream URLs, upstream response bodies, upstream error bodies, page traces, test samples, or returned rows.
 
 When an upstream API returns an error, the Worker returns the full upstream body to the caller. That body is never stored.
 
@@ -106,9 +106,14 @@ The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. G
 - Saved runner URLs are immutable and stable.
 - The runner caps pagination with `maxPages` and optional `maxItems`; `maxPages` is a safety cap, not a requested page count, and pagination stops naturally when the API has no next page.
 - GET page fetches retry short transient failures such as 429 and 5xx.
+- Stop conditions protect against empty-page loops, repeated next links or cursors, duplicate item IDs, max duration, and max response size.
+- Rate controls support page delays, retry attempts, retry statuses, `Retry-After`, and per-page timeout.
+- Test responses include an ephemeral page-by-page trace with redacted URLs; traces are never stored.
+- The auto-detect button fetches one first page, suggests result and pagination paths, and does not save the response.
+- Response shaping can return full items, flatten JSON:API `attributes`, or select named fields for Clay.
 - Upstream errors return full body content to Clay for debugging, but are not stored.
 - Remote smoke tests should be cleaned from D1 after verification.
 
 ## Clay usage
 
-Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs.
+Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs. After saving, use the in-app Clay setup copy block for the exact URL, auth headers, URL placeholder query params, and expected response shape.

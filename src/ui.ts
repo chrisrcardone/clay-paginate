@@ -177,6 +177,10 @@ export function renderApp(basePath = ""): string {
     input[type="file"] {
       padding: 7px;
     }
+    input[type="checkbox"] {
+      width: auto;
+      justify-self: start;
+    }
     input:focus, select:focus, textarea:focus, button:focus-visible {
       outline: 2px solid var(--focus);
       outline-offset: 0;
@@ -249,6 +253,11 @@ export function renderApp(basePath = ""): string {
       border-color: #fdd4b7;
       background: #fff3ed;
       color: #752b12;
+    }
+    .warning {
+      border-color: #f2d987;
+      background: var(--yellow-soft);
+      color: #594400;
     }
     .status {
       min-height: 20px;
@@ -369,6 +378,28 @@ export function renderApp(basePath = ""): string {
       border-radius: 3px 3px 0 0;
       background: var(--action);
       flex: none;
+    }
+    .trace {
+      display: grid;
+      gap: 6px;
+      max-height: 220px;
+      overflow: auto;
+    }
+    .trace-row {
+      display: grid;
+      grid-template-columns: 48px 70px 84px 84px minmax(0, 1fr);
+      gap: 8px;
+      align-items: center;
+      padding: 7px 8px;
+      border: 0.5px solid var(--border-soft);
+      border-radius: var(--radius-sm);
+      background: var(--surface-soft);
+      font-size: 12px;
+    }
+    .trace-row code {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
     @media (max-width: 980px) {
       main { grid-template-columns: 1fr; }
@@ -498,7 +529,47 @@ export function renderApp(basePath = ""): string {
         </div>
 
         <div class="section">
-          <div class="section-title"><span class="step">3</span><h3>Auth and test</h3></div>
+          <div class="section-title"><span class="step">3</span><h3>Response shaping</h3></div>
+          <div class="section-copy">Return the full item by default, flatten JSON:API attributes for easier Clay columns, or select only the fields Clay needs.</div>
+          <div class="grid-2">
+            <label>Shape mode
+              <select id="shapeMode">
+                <option value="raw">Full item</option>
+                <option value="jsonapiAttributes">Flatten JSON:API attributes</option>
+                <option value="select">Select fields</option>
+              </select>
+            </label>
+            <label>Selected fields<textarea id="shapeFields" spellcheck="false" placeholder="company:attributes.company_name&#10;score:attributes.score"></textarea></label>
+          </div>
+          <div class="hint">Use one field per line as <code>output_name:path.to.value</code>. Selected fields only applies when Shape mode is Select fields.</div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="step">4</span><h3>Safety and rate controls</h3></div>
+          <div class="section-copy">These controls prevent runaway loops and help with rate-limited APIs. The defaults stop on empty pages and repeated next links while still allowing full pagination.</div>
+          <div class="grid-3">
+            <label>Delay between pages, ms<input id="delayMs" type="number" min="0" max="10000" value="0"></label>
+            <label>Retry attempts<input id="retryAttempts" type="number" min="0" max="5" value="2"></label>
+            <label>Timeout, ms<input id="timeoutMs" type="number" min="1000" max="55000" value="25000"></label>
+          </div>
+          <div class="grid-3">
+            <label>Retry statuses<input id="retryStatuses" value="408,429,500,502,503,504"></label>
+            <label>Max duration, ms<input id="maxDurationMs" type="number" min="1000" placeholder="Optional"></label>
+            <label>Max response bytes<input id="maxResponseBytes" type="number" min="1024" placeholder="Optional"></label>
+          </div>
+          <div class="grid-3">
+            <label><input id="respectRetryAfter" type="checkbox" checked> Respect Retry-After</label>
+            <label><input id="stopOnEmptyPage" type="checkbox" checked> Stop on empty page</label>
+            <label><input id="stopOnRepeatedNext" type="checkbox" checked> Stop on repeated next</label>
+          </div>
+          <div class="grid-2">
+            <label><input id="stopOnDuplicateItemId" type="checkbox"> Stop on duplicate item ID</label>
+            <label>Item ID path<input id="itemIdPath" value="id"></label>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-title"><span class="step">5</span><h3>Auth and test</h3></div>
           <div class="section-copy">List only the header names Clay should forward at run time. Use test credentials here to verify the runner; test credentials and query values are not saved.</div>
           <label>Pass-through headers<input id="passThroughHeaders" value="authorization,x-api-key,api-key"></label>
           <div class="hint">Header values come from Clay at run time. They are never stored.</div>
@@ -514,20 +585,27 @@ export function renderApp(basePath = ""): string {
           <div id="credentialHeaders"></div>
           <label>Test query params<input id="queryString" placeholder="filter[start_time]=2026-05-27T00:00:00Z or key=api-key"></label>
           <label>Body template<textarea id="bodyTemplate" spellcheck="false"></textarea></label>
-          <div class="actions"><button id="testBtn" class="primary" type="button">Run test</button><span class="hint">Test credentials and query params are not saved.</span></div>
+          <div class="actions">
+            <button id="detectBtn" type="button">Auto-detect from first response</button>
+            <button id="testBtn" class="primary" type="button">Run test</button>
+            <span class="hint">Test credentials, query params, response rows, and traces are not saved.</span>
+          </div>
+          <div id="trace" class="trace"></div>
           <pre id="output">{}</pre>
         </div>
 
         <div class="section">
-          <div class="section-title"><span class="step">4</span><h3>Save and connect</h3></div>
+          <div class="section-title"><span class="step">6</span><h3>Save and connect</h3></div>
           <div class="section-copy">Save only after testing. Saved runners are locked so live Clay tables keep a stable URL and behavior.</div>
           <div id="urlShape" class="hint"></div>
+          <div id="validationWarnings" class="notice warning" hidden></div>
           <div class="notice">Saving creates a stable URL. Saved runners cannot be edited or deleted.</div>
           <div class="actions"><button id="saveBtn" type="button">Save runner</button><div id="status" class="status"></div></div>
           <div id="runUrl" class="url-box" hidden>
             <strong>Clay URL</strong>
             <code id="runUrlText"></code>
-            <div class="actions"><button id="copyBtn" type="button">Copy URL</button></div>
+            <div id="claySetup" class="hint"></div>
+            <div class="actions"><button id="copyBtn" type="button">Copy URL</button><button id="copySetupBtn" type="button">Copy Clay setup</button></div>
           </div>
         </div>
       </div>
@@ -556,9 +634,14 @@ export function renderApp(basePath = ""): string {
             <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
             <div class="metric"><span>Items returned</span><strong id="metricItems">0</strong></div>
             <div class="metric"><span>Avg duration</span><strong id="metricDuration">0 ms</strong></div>
+            <div class="metric"><span>Avg pages</span><strong id="metricAvgPages">0</strong></div>
+            <div class="metric"><span>Retries</span><strong id="metricRetries">0</strong></div>
           </div>
           <div id="statusCounts" class="actions"></div>
+          <div id="stopCounts" class="actions"></div>
+          <div id="errorCounts" class="actions"></div>
           <div id="statusChart" class="chart"></div>
+          <div id="volumeChart" class="chart"></div>
           <div id="recentRuns" class="hint"></div>
         </div>
       </section>
@@ -569,7 +652,7 @@ export function renderApp(basePath = ""): string {
     const BASE_PATH = ${JSON.stringify(basePath)};
     const state = { id: null, locked: false };
     const $ = (id) => document.getElementById(id);
-    const editableIds = ["name","method","targetUrl","resultPath","responseMode","maxItems","paginationType","maxPages","pageSize","pageParam","pageSizeParam","startPage","nextLinkPath","totalPagesPath","offsetParam","limitParam","startOffset","cursorParam","nextCursorPath","initialCursor","passThroughHeaders","bodyTemplate"];
+    const editableIds = ["name","method","targetUrl","resultPath","responseMode","maxItems","paginationType","maxPages","pageSize","pageParam","pageSizeParam","startPage","nextLinkPath","totalPagesPath","offsetParam","limitParam","startOffset","cursorParam","nextCursorPath","initialCursor","shapeMode","shapeFields","delayMs","retryAttempts","timeoutMs","retryStatuses","maxDurationMs","maxResponseBytes","respectRetryAfter","stopOnEmptyPage","stopOnRepeatedNext","stopOnDuplicateItemId","itemIdPath","passThroughHeaders","bodyTemplate"];
     const defaults = {
       name: "G2 Buyer Stream v2 API",
       targetUrl: "https://data.g2.com/api/v1/ahoy/remote-event-streams",
@@ -594,6 +677,23 @@ export function renderApp(basePath = ""): string {
         cursorParam: "cursor",
         nextCursorPath: "meta.next_cursor",
         initialCursor: ""
+      },
+      stopConditions: {
+        stopOnEmptyPage: true,
+        stopOnRepeatedNext: true,
+        stopOnDuplicateItemId: false,
+        itemIdPath: "id"
+      },
+      rateLimit: {
+        delayMs: 0,
+        retryAttempts: 2,
+        retryStatuses: [408, 429, 500, 502, 503, 504],
+        respectRetryAfter: true,
+        timeoutMs: 25000
+      },
+      responseShape: {
+        mode: "raw",
+        fields: []
       }
     };
     const MISSING = Symbol("missing");
@@ -618,6 +718,15 @@ export function renderApp(basePath = ""): string {
       cursorParam: defaults.pagination.cursorParam,
       nextCursorPath: defaults.pagination.nextCursorPath,
       initialCursor: defaults.pagination.initialCursor,
+      shapeMode: defaults.responseShape.mode,
+      shapeFields: "",
+      delayMs: String(defaults.rateLimit.delayMs),
+      retryAttempts: String(defaults.rateLimit.retryAttempts),
+      timeoutMs: String(defaults.rateLimit.timeoutMs),
+      retryStatuses: defaults.rateLimit.retryStatuses.join(","),
+      maxDurationMs: "",
+      maxResponseBytes: "",
+      itemIdPath: defaults.stopConditions.itemIdPath,
       passThroughHeaders: defaults.passThroughHeaders.join(","),
       bodyTemplate: defaults.bodyTemplate,
       queryString: ""
@@ -688,9 +797,11 @@ export function renderApp(basePath = ""): string {
         "7. If the API returns JSON:API links.next, use type jsonapi, nextLinkPath links.next, and totalPagesPath meta.page_count if available.",
         "8. Use the largest documented pageSize unless the docs warn against it; larger page sizes reduce API calls and make full pagination more reliable.",
         "9. Current form defaults are not evidence. Do not copy a default value unless the API docs or the user's goal confirms it. If the docs URL conflicts with a default, prefer the docs or leave the value blank and warn.",
-        "10. For every non-blank value you return, include an explanation with certainty: high, medium, or low.",
-        "11. If a value is not confirmed by the docs, leave it blank or null instead of guessing, explain the uncertainty, and add a warning.",
-        "12. Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.",
+        "10. Keep stopConditions and rateLimit conservative but production-ready: stopOnEmptyPage true, stopOnRepeatedNext true, retryAttempts 2, retryStatuses [408,429,500,502,503,504], respectRetryAfter true.",
+        "11. Choose responseShape mode raw unless the API is JSON:API and flattening attributes would clearly help Clay users.",
+        "12. For every non-blank value you return, include an explanation with certainty: high, medium, or low.",
+        "13. If a value is not confirmed by the docs, leave it blank or null instead of guessing, explain the uncertainty, and add a warning.",
+        "14. Return strict JSON only. Do not wrap it in markdown and do not add prose outside the object.",
         "",
         "Return exactly this JSON object shape:",
         "{",
@@ -722,6 +833,25 @@ export function renderApp(basePath = ""): string {
         "    \\"passThroughHeaders\\": [\\"authorization\\"],",
         "    \\"staticHeaders\\": [{ \\"name\\": \\"Accept\\", \\"value\\": \\"application/json\\" }],",
         "    \\"bodyTemplate\\": \\"\\",",
+        "    \\"stopConditions\\": {",
+        "      \\"stopOnEmptyPage\\": true,",
+        "      \\"stopOnRepeatedNext\\": true,",
+        "      \\"stopOnDuplicateItemId\\": false,",
+        "      \\"itemIdPath\\": \\"id\\",",
+        "      \\"maxDurationMs\\": null,",
+        "      \\"maxResponseBytes\\": null",
+        "    },",
+        "    \\"rateLimit\\": {",
+        "      \\"delayMs\\": 0,",
+        "      \\"retryAttempts\\": 2,",
+        "      \\"retryStatuses\\": [408, 429, 500, 502, 503, 504],",
+        "      \\"respectRetryAfter\\": true,",
+        "      \\"timeoutMs\\": 25000",
+        "    },",
+        "    \\"responseShape\\": {",
+        "      \\"mode\\": \\"raw | jsonapiAttributes | select\\",",
+        "      \\"fields\\": [{ \\"name\\": \\"company\\", \\"path\\": \\"attributes.company_name\\" }]",
+        "    },",
         "    \\"testQueryParams\\": \\"key=replace-with-test-key\\",",
         "    \\"testCredentialHeaders\\": [{ \\"name\\": \\"Authorization\\", \\"value\\": \\"\\" }]",
         "  },",
@@ -976,6 +1106,63 @@ export function renderApp(basePath = ""): string {
       return String(value);
     }
 
+    function toBool(value) {
+      if (value === MISSING) return MISSING;
+      if (typeof value === "boolean") return value;
+      return ["true", "1", "yes", "on"].includes(String(value || "").trim().toLowerCase());
+    }
+
+    function toShapeMode(value) {
+      if (value === MISSING) return MISSING;
+      const mode = normalizeObjectKey(value);
+      if (mode === "raw" || mode === "fullitem") return "raw";
+      if (mode === "jsonapiattributes" || mode === "flattenjsonapiattributes") return "jsonapiAttributes";
+      if (mode === "select" || mode === "selectedfields") return "select";
+      return "raw";
+    }
+
+    function formatFieldMappings(value) {
+      if (value === MISSING) return MISSING;
+      if (!value) return "";
+      if (typeof value === "string") return value;
+      if (Array.isArray(value)) {
+        return value
+          .map((field) => {
+            if (typeof field === "string") return field;
+            return (field.name || field.path || "") + ":" + (field.path || "");
+          })
+          .filter(Boolean)
+          .join("\\n");
+      }
+      if (typeof value === "object") {
+        return Object.entries(value).map(([name, path]) => name + ":" + path).join("\\n");
+      }
+      return String(value);
+    }
+
+    function parseFieldMappings(text) {
+      return text
+        .split("\\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          const separator = line.indexOf(":");
+          if (separator === -1) return { name: line, path: line };
+          return { name: line.slice(0, separator).trim(), path: line.slice(separator + 1).trim() };
+        })
+        .filter((field) => field.name && field.path);
+    }
+
+    function parseNumberList(text) {
+      return text.split(",").map((value) => Number(value.trim())).filter((value) => Number.isFinite(value));
+    }
+
+    function formatNumberList(value) {
+      if (value === MISSING) return MISSING;
+      if (Array.isArray(value)) return value.join(",");
+      return String(value || "");
+    }
+
     function applyFieldFromAi(id, value, defaultValue, formatter, applied, blanked) {
       if (value !== MISSING) {
         $(id).value = formatter(value);
@@ -984,6 +1171,18 @@ export function renderApp(basePath = ""): string {
       }
       if (String($(id).value).trim() === String(defaultValue ?? "").trim()) {
         $(id).value = "";
+        blanked.push(id);
+      }
+    }
+
+    function applyCheckboxFromAi(id, value, defaultValue, applied, blanked) {
+      if (value !== MISSING) {
+        $(id).checked = toBool(value);
+        applied.push(id);
+        return;
+      }
+      if ($(id).checked === defaultValue) {
+        $(id).checked = false;
         blanked.push(id);
       }
     }
@@ -1042,6 +1241,19 @@ export function renderApp(basePath = ""): string {
         cursorParam: firstAiValue(source, ["pagination.cursorParam", "cursorParam"]),
         nextCursorPath: firstAiValue(source, ["pagination.nextCursorPath", "nextCursorPath"]),
         initialCursor: firstAiValue(source, ["pagination.initialCursor", "initialCursor"]),
+        shapeMode: firstAiValue(source, ["responseShape.mode", "shapeMode"]),
+        shapeFields: firstAiValue(source, ["responseShape.fields", "shapeFields"]),
+        delayMs: firstAiValue(source, ["rateLimit.delayMs", "delayMs"]),
+        retryAttempts: firstAiValue(source, ["rateLimit.retryAttempts", "retryAttempts"]),
+        timeoutMs: firstAiValue(source, ["rateLimit.timeoutMs", "timeoutMs"]),
+        retryStatuses: firstAiValue(source, ["rateLimit.retryStatuses", "retryStatuses"]),
+        respectRetryAfter: firstAiValue(source, ["rateLimit.respectRetryAfter", "respectRetryAfter"]),
+        stopOnEmptyPage: firstAiValue(source, ["stopConditions.stopOnEmptyPage", "stopOnEmptyPage"]),
+        stopOnRepeatedNext: firstAiValue(source, ["stopConditions.stopOnRepeatedNext", "stopOnRepeatedNext"]),
+        stopOnDuplicateItemId: firstAiValue(source, ["stopConditions.stopOnDuplicateItemId", "stopOnDuplicateItemId"]),
+        itemIdPath: firstAiValue(source, ["stopConditions.itemIdPath", "itemIdPath"]),
+        maxDurationMs: firstAiValue(source, ["stopConditions.maxDurationMs", "maxDurationMs"]),
+        maxResponseBytes: firstAiValue(source, ["stopConditions.maxResponseBytes", "maxResponseBytes"]),
         passThroughHeaders: firstAiValue(source, ["passThroughHeaders", "auth.passThroughHeaders"]),
         staticHeaders: firstAiValue(source, ["staticHeaders", "headers.static"]),
         bodyTemplate: firstAiValue(source, ["bodyTemplate", "body"]),
@@ -1069,6 +1281,19 @@ export function renderApp(basePath = ""): string {
       applyFieldFromAi("cursorParam", fields.cursorParam, fieldDefaults.cursorParam, toFormString, applied, blanked);
       applyFieldFromAi("nextCursorPath", fields.nextCursorPath, fieldDefaults.nextCursorPath, toFormString, applied, blanked);
       applyFieldFromAi("initialCursor", fields.initialCursor, fieldDefaults.initialCursor, toFormString, applied, blanked);
+      applyFieldFromAi("shapeMode", fields.shapeMode, fieldDefaults.shapeMode, toShapeMode, applied, blanked);
+      applyFieldFromAi("shapeFields", fields.shapeFields, fieldDefaults.shapeFields, formatFieldMappings, applied, blanked);
+      applyFieldFromAi("delayMs", fields.delayMs, fieldDefaults.delayMs, toFormNumber, applied, blanked);
+      applyFieldFromAi("retryAttempts", fields.retryAttempts, fieldDefaults.retryAttempts, toFormNumber, applied, blanked);
+      applyFieldFromAi("timeoutMs", fields.timeoutMs, fieldDefaults.timeoutMs, toFormNumber, applied, blanked);
+      applyFieldFromAi("retryStatuses", fields.retryStatuses, fieldDefaults.retryStatuses, formatNumberList, applied, blanked);
+      applyFieldFromAi("itemIdPath", fields.itemIdPath, fieldDefaults.itemIdPath, toFormString, applied, blanked);
+      applyFieldFromAi("maxDurationMs", fields.maxDurationMs, fieldDefaults.maxDurationMs, toFormNumber, applied, blanked);
+      applyFieldFromAi("maxResponseBytes", fields.maxResponseBytes, fieldDefaults.maxResponseBytes, toFormNumber, applied, blanked);
+      applyCheckboxFromAi("respectRetryAfter", fields.respectRetryAfter, defaults.rateLimit.respectRetryAfter, applied, blanked);
+      applyCheckboxFromAi("stopOnEmptyPage", fields.stopOnEmptyPage, defaults.stopConditions.stopOnEmptyPage, applied, blanked);
+      applyCheckboxFromAi("stopOnRepeatedNext", fields.stopOnRepeatedNext, defaults.stopConditions.stopOnRepeatedNext, applied, blanked);
+      applyCheckboxFromAi("stopOnDuplicateItemId", fields.stopOnDuplicateItemId, defaults.stopConditions.stopOnDuplicateItemId, applied, blanked);
       applyFieldFromAi("passThroughHeaders", fields.passThroughHeaders, fieldDefaults.passThroughHeaders, formatHeaderNames, applied, blanked);
       applyFieldFromAi("bodyTemplate", fields.bodyTemplate, fieldDefaults.bodyTemplate, toFormString, applied, blanked);
       applyFieldFromAi("queryString", fields.queryString, fieldDefaults.queryString, formatQueryParams, applied, blanked);
@@ -1153,6 +1378,25 @@ export function renderApp(basePath = ""): string {
           cursorParam: $("cursorParam").value.trim(),
           nextCursorPath: $("nextCursorPath").value.trim(),
           initialCursor: $("initialCursor").value.trim()
+        },
+        stopConditions: {
+          stopOnEmptyPage: $("stopOnEmptyPage").checked,
+          stopOnRepeatedNext: $("stopOnRepeatedNext").checked,
+          stopOnDuplicateItemId: $("stopOnDuplicateItemId").checked,
+          itemIdPath: $("itemIdPath").value.trim(),
+          maxDurationMs: numberOrUndefined("maxDurationMs"),
+          maxResponseBytes: numberOrUndefined("maxResponseBytes")
+        },
+        rateLimit: {
+          delayMs: numberOrUndefined("delayMs") || 0,
+          retryAttempts: numberOrUndefined("retryAttempts") ?? 2,
+          retryStatuses: parseNumberList($("retryStatuses").value),
+          respectRetryAfter: $("respectRetryAfter").checked,
+          timeoutMs: numberOrUndefined("timeoutMs") || 25000
+        },
+        responseShape: {
+          mode: $("shapeMode").value,
+          fields: parseFieldMappings($("shapeFields").value)
         }
       };
     }
@@ -1190,10 +1434,51 @@ export function renderApp(basePath = ""): string {
         requireValue("cursorParam", "Cursor param");
         requireValue("nextCursorPath", "Next cursor path");
       }
+      if ($("shapeMode").value === "select" && !parseFieldMappings($("shapeFields").value).length) {
+        missing.push("Selected fields");
+      }
 
       if (missing.length) {
         throw new Error("Fill required fields before testing or saving: " + missing.join(", "));
       }
+    }
+
+    function getValidationWarnings() {
+      const config = readConfig();
+      const warnings = [];
+      if (config.pagination.maxPages < 50 && config.pagination.type !== "none") {
+        warnings.push("Max pages is low for a full pagination runner. Use it only if the API has very small result sets.");
+      }
+      if (!config.passThroughHeaders.length) {
+        warnings.push("No pass-through headers are configured. Most private APIs need at least one auth header from Clay.");
+      }
+      try {
+        const url = new URL(config.targetUrl);
+        for (const [key, value] of url.searchParams.entries()) {
+          if (/^(api[_-]?key|apikey|key|token|access[_-]?token|auth[_-]?token|authorization|credential|client[_-]?secret|secret|password)$/i.test(key) && value && !/{{\\s*[A-Za-z0-9_.-]+\\s*}}/.test(value)) {
+            warnings.push("Target URL appears to contain a saved credential in query param " + key + ". Use {{" + key + "}} instead.");
+          }
+        }
+      } catch {
+        warnings.push("Target URL is not a valid absolute URL yet.");
+      }
+      if (config.rateLimit.delayMs && config.rateLimit.delayMs > 5000) {
+        warnings.push("Delay between pages is high and may cause long Clay waits.");
+      }
+      if (config.responseShape?.mode === "select" && !config.responseShape.fields?.length) {
+        warnings.push("Select fields mode needs at least one output_name:path mapping.");
+      }
+      if (!config.stopConditions?.stopOnRepeatedNext) {
+        warnings.push("Repeated-next protection is disabled. Only do this for APIs that intentionally repeat next tokens.");
+      }
+      return warnings;
+    }
+
+    function renderValidationWarnings() {
+      const warnings = getValidationWarnings();
+      $("validationWarnings").hidden = warnings.length === 0;
+      $("validationWarnings").textContent = warnings.length ? "Before saving: " + warnings.join(" ") : "";
+      return warnings;
     }
 
     function applyConfig(config) {
@@ -1222,8 +1507,25 @@ export function renderApp(basePath = ""): string {
       $("cursorParam").value = p.cursorParam || "cursor";
       $("nextCursorPath").value = p.nextCursorPath || "meta.next_cursor";
       $("initialCursor").value = p.initialCursor || "";
+      const stop = config.stopConditions || {};
+      $("stopOnEmptyPage").checked = stop.stopOnEmptyPage ?? true;
+      $("stopOnRepeatedNext").checked = stop.stopOnRepeatedNext ?? true;
+      $("stopOnDuplicateItemId").checked = stop.stopOnDuplicateItemId ?? false;
+      $("itemIdPath").value = stop.itemIdPath || "id";
+      $("maxDurationMs").value = stop.maxDurationMs || "";
+      $("maxResponseBytes").value = stop.maxResponseBytes || "";
+      const rate = config.rateLimit || {};
+      $("delayMs").value = rate.delayMs ?? 0;
+      $("retryAttempts").value = rate.retryAttempts ?? 2;
+      $("retryStatuses").value = (rate.retryStatuses || [408,429,500,502,503,504]).join(",");
+      $("respectRetryAfter").checked = rate.respectRetryAfter ?? true;
+      $("timeoutMs").value = rate.timeoutMs ?? 25000;
+      const shape = config.responseShape || {};
+      $("shapeMode").value = shape.mode || "raw";
+      $("shapeFields").value = formatFieldMappings(shape.fields || []);
       setHeaderRows("staticHeaders", config.staticHeaders || []);
       updatePaginationFields();
+      renderValidationWarnings();
       setLocked(state.locked);
     }
 
@@ -1278,12 +1580,59 @@ export function renderApp(basePath = ""): string {
           const detail = await api("/api/configs/" + config.id);
           applyConfig(detail.config);
           showRunUrl(detail.runUrl);
+          renderClaySetup(detail.runUrl, detail.config);
           print(detail.config);
           setStatus("Loaded", true);
           await refreshAnalytics();
         });
         list.appendChild(button);
       });
+    }
+
+    function renderTrace(pages) {
+      const trace = $("trace");
+      trace.innerHTML = "";
+      if (!pages || !pages.length) {
+        return;
+      }
+      pages.forEach((page) => {
+        const row = document.createElement("div");
+        row.className = "trace-row";
+        row.innerHTML = "<strong></strong><span></span><span></span><span></span><code></code>";
+        row.querySelector("strong").textContent = "#" + page.page;
+        row.querySelectorAll("span")[0].textContent = String(page.status);
+        row.querySelectorAll("span")[1].textContent = (page.itemCount || 0) + " items";
+        row.querySelectorAll("span")[2].textContent = (page.durationMs || 0) + " ms";
+        row.querySelector("code").textContent = (page.stopReason ? page.stopReason + " · " : "") + page.url;
+        trace.appendChild(row);
+      });
+    }
+
+    async function runDetect() {
+      requireFormReady();
+      setStatus("Detecting from first response...", true);
+      const body = await api("/api/detect", {
+        method: "POST",
+        body: JSON.stringify({
+          config: readConfig(),
+          credentialHeaders: readHeaderRows("credentialHeaders"),
+          queryString: $("queryString").value.trim()
+        })
+      });
+      const suggestions = body.detection.suggestions || {};
+      if (suggestions.resultPath) $("resultPath").value = suggestions.resultPath;
+      if (suggestions.pagination) {
+        const p = suggestions.pagination;
+        if (p.type) $("paginationType").value = p.type;
+        if (p.nextLinkPath) $("nextLinkPath").value = p.nextLinkPath;
+        if (p.totalPagesPath) $("totalPagesPath").value = p.totalPagesPath;
+        if (p.nextCursorPath) $("nextCursorPath").value = p.nextCursorPath;
+      }
+      updatePaginationFields();
+      renderTrace([body.detection.page]);
+      print(body);
+      setStatus("Detected " + (body.detection.detected.paginationType || "unknown") + " pagination from the first response", true);
+      renderValidationWarnings();
     }
 
     async function runTest() {
@@ -1298,23 +1647,47 @@ export function renderApp(basePath = ""): string {
         })
       });
       print(body);
-      setStatus("Test returned " + body.itemCount + " items across " + body.pageCount + " page(s)", true);
+      renderTrace(body.pages);
+      setStatus("Test returned " + body.itemCount + " items across " + body.pageCount + " page(s). Stop: " + body.stopReason, true);
       if (state.id) await refreshAnalytics();
     }
 
     async function saveRunner() {
       if (state.locked) return;
       requireFormReady();
+      renderValidationWarnings();
       setStatus("Saving...", true);
       const body = await api("/api/configs", { method: "POST", body: JSON.stringify({ config: readConfig() }) });
       state.id = body.config.id;
       state.locked = true;
       showRunUrl(body.runUrl);
+      renderClaySetup(body.runUrl, body.config);
       print(body);
       setLocked(true);
       setStatus("Saved", true);
       await refreshList();
       await refreshAnalytics();
+    }
+
+    function buildClaySetup(url, config = readConfig()) {
+      const placeholders = Array.from(config.targetUrl.matchAll(/{{\\s*([A-Za-z0-9_.-]+)\\s*}}/g)).map((match) => match[1]);
+      const queryText = placeholders.length ? "Add query params on the Clay URL: " + placeholders.map((name) => name + "=<secret>").join("&") : "No URL credential query params needed.";
+      const headers = config.passThroughHeaders.length ? config.passThroughHeaders.join(", ") : "None configured";
+      const response = config.responseMode === "envelope" ? "Envelope: { data, meta }" : "Array of items";
+      return [
+        "Clay HTTP Sourcing setup",
+        "URL: " + url,
+        "Method in Clay: GET",
+        "Authentication headers to send from Clay: " + headers,
+        queryText,
+        "Expected response: " + response,
+        "Response shaping: " + (config.responseShape?.mode || "raw"),
+        "Do not put API keys into saved static headers."
+      ].join("\\n");
+    }
+
+    function renderClaySetup(url, config = readConfig()) {
+      $("claySetup").textContent = buildClaySetup(url, config);
     }
 
     async function refreshAnalytics() {
@@ -1332,6 +1705,8 @@ export function renderApp(basePath = ""): string {
       $("metricClayRuns").textContent = analytics.clayRuns || 0;
       $("metricItems").textContent = analytics.totalItems || 0;
       $("metricDuration").textContent = (analytics.avgDurationMs || 0) + " ms";
+      $("metricAvgPages").textContent = analytics.avgPagesPerRun || 0;
+      $("metricRetries").textContent = analytics.totalRetries || 0;
       $("statusCounts").innerHTML = "";
       (analytics.statusCounts || []).forEach((entry) => {
         const pill = document.createElement("span");
@@ -1339,8 +1714,23 @@ export function renderApp(basePath = ""): string {
         pill.textContent = entry.statusCode + ": " + entry.count;
         $("statusCounts").appendChild(pill);
       });
+      $("stopCounts").innerHTML = "";
+      (analytics.stopReasonCounts || []).forEach((entry) => {
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.textContent = "stop " + entry.stopReason + ": " + entry.count;
+        $("stopCounts").appendChild(pill);
+      });
+      $("errorCounts").innerHTML = "";
+      (analytics.errorCounts || []).forEach((entry) => {
+        const pill = document.createElement("span");
+        pill.className = "pill";
+        pill.textContent = entry.error + ": " + entry.count;
+        $("errorCounts").appendChild(pill);
+      });
       renderChart(analytics.statusTimeline || []);
-      $("recentRuns").textContent = analytics.recentRuns?.length ? "Last call: " + analytics.recentRuns[0].status + " · " + analytics.recentRuns[0].itemCount + " items" : "No calls yet.";
+      renderVolumeChart(analytics.volumeTimeline || []);
+      $("recentRuns").textContent = analytics.recentRuns?.length ? "Last call: " + analytics.recentRuns[0].status + " · " + analytics.recentRuns[0].itemCount + " items · stop " + (analytics.recentRuns[0].stopReason || "unknown") : "No calls yet.";
     }
 
     function renderChart(points) {
@@ -1362,6 +1752,23 @@ export function renderApp(basePath = ""): string {
       });
     }
 
+    function renderVolumeChart(points) {
+      const chart = $("volumeChart");
+      chart.innerHTML = "";
+      if (!points.length) {
+        chart.innerHTML = '<span class="hint">No volume yet.</span>';
+        return;
+      }
+      const max = Math.max(...points.map((point) => point.calls), 1);
+      points.slice(-30).forEach((point) => {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.height = Math.max(4, Math.round((point.calls / max) * 74)) + "px";
+        bar.title = point.bucket + " · " + point.calls + " calls · " + point.items + " items · " + point.pages + " pages";
+        chart.appendChild(bar);
+      });
+    }
+
     $("newBtn").addEventListener("click", () => {
       applyConfig(defaults);
       state.id = null;
@@ -1370,6 +1777,8 @@ export function renderApp(basePath = ""): string {
       setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
       $("runUrl").hidden = true;
       $("analyticsPanel").hidden = true;
+      $("trace").innerHTML = "";
+      $("claySetup").textContent = "";
       $("aiObjectReview").hidden = true;
       $("aiObjectPaste").value = "";
       setAiObjectStatus("");
@@ -1381,11 +1790,16 @@ export function renderApp(basePath = ""): string {
     $("addStaticHeader").addEventListener("click", () => addHeaderRow("staticHeaders"));
     $("addCredentialHeader").addEventListener("click", () => addHeaderRow("credentialHeaders"));
     $("paginationType").addEventListener("change", updatePaginationFields);
+    $("detectBtn").addEventListener("click", () => runDetect().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
     $("testBtn").addEventListener("click", () => runTest().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
     $("saveBtn").addEventListener("click", () => saveRunner().catch((error) => { print({ error: error.message }); setStatus(error.message, false); }));
     $("copyBtn").addEventListener("click", async () => {
       await navigator.clipboard.writeText($("runUrlText").textContent);
       setStatus("Copied", true);
+    });
+    $("copySetupBtn").addEventListener("click", async () => {
+      await navigator.clipboard.writeText($("claySetup").textContent || buildClaySetup($("runUrlText").textContent));
+      setStatus("Setup copied", true);
     });
 
     $("generatePromptBtn").addEventListener("click", generatePrompt);
@@ -1403,6 +1817,13 @@ export function renderApp(basePath = ""): string {
     $("docsFile").addEventListener("change", (event) => {
       const file = event.target.files?.[0];
       if (file) readDocsFile(file).catch((error) => setPromptStatus(error.message));
+    });
+    editableIds.forEach((id) => {
+      const element = $(id);
+      if (element) {
+        element.addEventListener("input", renderValidationWarnings);
+        element.addEventListener("change", renderValidationWarnings);
+      }
     });
 
     applyConfig(defaults);

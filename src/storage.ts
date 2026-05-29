@@ -117,14 +117,17 @@ export async function logRun(
     durationMs?: number;
     upstreamStatus?: number;
     error?: string;
+    stopReason?: string;
+    retryCount?: number;
   },
 ): Promise<void> {
   // Analytics are deliberately metadata-only. No Clay headers, query params,
-  // request bodies, upstream URLs, or response rows are persisted here.
+  // request bodies, upstream URLs, response rows, or upstream error bodies are
+  // persisted here. Stop reasons and retry counts are operational metadata.
   await db
     .prepare(
-      `INSERT INTO run_logs (id, config_id, mode, status, page_count, item_count, duration_ms, upstream_status, error)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO run_logs (id, config_id, mode, status, page_count, item_count, duration_ms, upstream_status, error, stop_reason, retry_count)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .bind(
       crypto.randomUUID(),
@@ -136,6 +139,8 @@ export async function logRun(
       input.durationMs ?? 0,
       input.upstreamStatus ?? null,
       input.error ? input.error.slice(0, 80) : null,
+      input.stopReason ? input.stopReason.slice(0, 80) : null,
+      input.retryCount ?? 0,
     )
     .run();
 }
@@ -152,6 +157,9 @@ export async function getAnalytics(db: D1Database, configId: string): Promise<Ru
          COALESCE(SUM(page_count), 0) AS totalPages,
          COALESCE(SUM(item_count), 0) AS totalItems,
          COALESCE(ROUND(AVG(duration_ms)), 0) AS avgDurationMs,
+         COALESCE(ROUND(AVG(page_count), 1), 0) AS avgPagesPerRun,
+         COALESCE(ROUND(AVG(item_count), 1), 0) AS avgItemsPerRun,
+         COALESCE(SUM(retry_count), 0) AS totalRetries,
          MAX(created_at) AS lastRunAt
        FROM run_logs
        WHERE config_id = ?`,
@@ -189,14 +197,54 @@ export async function getAnalytics(db: D1Database, configId: string): Promise<Ru
        FROM run_logs
        WHERE config_id = ? AND created_at >= datetime('now', '-30 days')
        GROUP BY bucket, status_code
-       ORDER BY bucket ASC, status_code ASC`,
+      ORDER BY bucket ASC, status_code ASC`,
     )
     .bind(configId)
     .all<{ bucket: string; status_code: string; count: number }>();
 
+  const volumeTimeline = await db
+    .prepare(
+      `SELECT
+         date(created_at) AS bucket,
+         COUNT(*) AS calls,
+         COALESCE(SUM(page_count), 0) AS pages,
+         COALESCE(SUM(item_count), 0) AS items,
+         COALESCE(ROUND(AVG(duration_ms)), 0) AS avg_duration_ms
+       FROM run_logs
+       WHERE config_id = ? AND created_at >= datetime('now', '-30 days')
+       GROUP BY bucket
+       ORDER BY bucket ASC`,
+    )
+    .bind(configId)
+    .all<{ bucket: string; calls: number; pages: number; items: number; avg_duration_ms: number }>();
+
+  const errorCounts = await db
+    .prepare(
+      `SELECT COALESCE(error, 'none') AS error, COUNT(*) AS count
+       FROM run_logs
+       WHERE config_id = ? AND status = 'error'
+       GROUP BY error
+       ORDER BY count DESC, error ASC
+       LIMIT 10`,
+    )
+    .bind(configId)
+    .all<{ error: string; count: number }>();
+
+  const stopReasonCounts = await db
+    .prepare(
+      `SELECT COALESCE(stop_reason, 'unknown') AS stop_reason, COUNT(*) AS count
+       FROM run_logs
+       WHERE config_id = ? AND status = 'ok'
+       GROUP BY stop_reason
+       ORDER BY count DESC, stop_reason ASC
+       LIMIT 10`,
+    )
+    .bind(configId)
+    .all<{ stop_reason: string; count: number }>();
+
   const recent = await db
     .prepare(
-      `SELECT mode, status, page_count, item_count, duration_ms, upstream_status, error, created_at
+      `SELECT mode, status, page_count, item_count, duration_ms, upstream_status, error, stop_reason, retry_count, created_at
        FROM run_logs
        WHERE config_id = ?
        ORDER BY created_at DESC
@@ -211,6 +259,8 @@ export async function getAnalytics(db: D1Database, configId: string): Promise<Ru
       duration_ms: number;
       upstream_status: number | null;
       error: string | null;
+      stop_reason: string | null;
+      retry_count: number;
       created_at: string;
     }>();
 
@@ -223,15 +273,33 @@ export async function getAnalytics(db: D1Database, configId: string): Promise<Ru
     totalPages: Number(aggregate?.totalPages ?? 0),
     totalItems: Number(aggregate?.totalItems ?? 0),
     avgDurationMs: Number(aggregate?.avgDurationMs ?? 0),
+    avgPagesPerRun: Number(aggregate?.avgPagesPerRun ?? 0),
+    avgItemsPerRun: Number(aggregate?.avgItemsPerRun ?? 0),
+    totalRetries: Number(aggregate?.totalRetries ?? 0),
     lastRunAt: typeof aggregate?.lastRunAt === "string" ? aggregate.lastRunAt : null,
     statusCounts: (statusCounts.results ?? []).map((row) => ({
       statusCode: row.status_code,
+      count: row.count,
+    })),
+    errorCounts: (errorCounts.results ?? []).map((row) => ({
+      error: row.error,
+      count: row.count,
+    })),
+    stopReasonCounts: (stopReasonCounts.results ?? []).map((row) => ({
+      stopReason: row.stop_reason,
       count: row.count,
     })),
     statusTimeline: (statusTimeline.results ?? []).map((row) => ({
       bucket: row.bucket,
       statusCode: row.status_code,
       count: row.count,
+    })),
+    volumeTimeline: (volumeTimeline.results ?? []).map((row) => ({
+      bucket: row.bucket,
+      calls: row.calls,
+      pages: row.pages,
+      items: row.items,
+      avgDurationMs: row.avg_duration_ms,
     })),
     recentRuns: (recent.results ?? []).map(toRunLogSummary),
   };
@@ -245,6 +313,8 @@ function toRunLogSummary(row: {
   duration_ms: number;
   upstream_status: number | null;
   error: string | null;
+  stop_reason: string | null;
+  retry_count: number;
   created_at: string;
 }): RunLogSummary {
   return {
@@ -255,6 +325,8 @@ function toRunLogSummary(row: {
     durationMs: row.duration_ms,
     upstreamStatus: row.upstream_status,
     error: row.error,
+    stopReason: row.stop_reason,
+    retryCount: row.retry_count,
     createdAt: row.created_at,
   };
 }

@@ -14,6 +14,8 @@ When helping configure a runner for a user:
 - Treat form defaults as examples, not evidence from the API docs.
 - Use `maxPages` as a production safety cap, usually 250 and up to 1000 for large result sets.
 - Prefer the largest documented page size unless the API docs warn against it.
+- Keep stop conditions and rate controls production-safe unless docs justify changing them.
+- Choose response shaping deliberately: raw by default, JSON:API attributes for easier Clay columns, select fields only when exact fields are known.
 
 When changing code:
 

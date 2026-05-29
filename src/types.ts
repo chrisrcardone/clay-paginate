@@ -17,6 +17,33 @@ export interface HeaderPair {
   value: string;
 }
 
+export interface FieldMapping {
+  name: string;
+  path: string;
+}
+
+export interface StopConditions {
+  stopOnEmptyPage?: boolean;
+  stopOnRepeatedNext?: boolean;
+  stopOnDuplicateItemId?: boolean;
+  itemIdPath?: string;
+  maxDurationMs?: number;
+  maxResponseBytes?: number;
+}
+
+export interface RateLimitSettings {
+  delayMs?: number;
+  retryAttempts?: number;
+  retryStatuses?: number[];
+  respectRetryAfter?: boolean;
+  timeoutMs?: number;
+}
+
+export interface ResponseShape {
+  mode?: "raw" | "jsonapiAttributes" | "select";
+  fields?: FieldMapping[];
+}
+
 export interface PaginationSettings {
   type: PaginationType;
   maxPages: number;
@@ -46,6 +73,9 @@ export interface RunnerConfig {
   passThroughHeaders: string[];
   bodyTemplate?: string;
   pagination: PaginationSettings;
+  stopConditions?: StopConditions;
+  rateLimit?: RateLimitSettings;
+  responseShape?: ResponseShape;
 }
 
 export interface RunAnalytics {
@@ -57,9 +87,15 @@ export interface RunAnalytics {
   totalPages: number;
   totalItems: number;
   avgDurationMs: number;
+  avgPagesPerRun: number;
+  avgItemsPerRun: number;
+  totalRetries: number;
   lastRunAt: string | null;
   statusCounts: StatusCount[];
+  errorCounts: ErrorCount[];
+  stopReasonCounts: StopReasonCount[];
   statusTimeline: StatusTimelinePoint[];
+  volumeTimeline: VolumeTimelinePoint[];
   recentRuns: RunLogSummary[];
 }
 
@@ -74,6 +110,24 @@ export interface StatusTimelinePoint {
   count: number;
 }
 
+export interface VolumeTimelinePoint {
+  bucket: string;
+  calls: number;
+  pages: number;
+  items: number;
+  avgDurationMs: number;
+}
+
+export interface ErrorCount {
+  error: string;
+  count: number;
+}
+
+export interface StopReasonCount {
+  stopReason: string;
+  count: number;
+}
+
 export interface RunLogSummary {
   mode: "test" | "run";
   status: "ok" | "error";
@@ -82,6 +136,8 @@ export interface RunLogSummary {
   durationMs: number;
   upstreamStatus: number | null;
   error: string | null;
+  stopReason: string | null;
+  retryCount: number;
   createdAt: string;
 }
 
@@ -90,7 +146,11 @@ export interface PageDebug {
   url: string;
   status: number;
   itemCount: number;
+  durationMs: number;
+  retryCount: number;
+  responseBytes: number;
   next?: string | null;
+  stopReason?: string | null;
 }
 
 export interface RunnerResult {
@@ -99,6 +159,8 @@ export interface RunnerResult {
   upstreamStatus: number;
   durationMs: number;
   truncated: boolean;
+  stopReason: string;
+  retryCount: number;
 }
 
 export interface SavedConfigRow {
@@ -119,4 +181,19 @@ export interface TestRequest {
   credentialHeaders?: HeaderPair[];
   queryString?: string;
   body?: string;
+}
+
+export interface DetectionResult {
+  suggestions: Partial<RunnerConfig>;
+  detected: {
+    resultPath?: string;
+    paginationType?: PaginationType;
+    nextLinkPath?: string;
+    totalPagesPath?: string;
+    nextCursorPath?: string;
+  };
+  evidence: string[];
+  warnings: string[];
+  page: PageDebug;
+  upstreamStatus: number;
 }

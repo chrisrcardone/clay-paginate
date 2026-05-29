@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getByPath } from "../src/jsonPath";
-import { buildPageUrl, normalizeConfig, normalizeTargetUrl, runPagination } from "../src/pagination";
+import { buildPageUrl, detectFromFirstResponse, normalizeConfig, normalizeTargetUrl, runPagination } from "../src/pagination";
 import type { RunnerConfig } from "../src/types";
 
 const baseConfig: RunnerConfig = {
@@ -141,5 +141,111 @@ describe("pagination runner", () => {
 
     expect(calls).toBe(2);
     expect(result.items).toEqual([{ id: "1" }]);
+  });
+
+  it("stops safely on repeated next URLs", async () => {
+    let calls = 0;
+    const fetcher = async (): Promise<Response> => {
+      calls += 1;
+      return Response.json({
+        data: [{ id: String(calls) }],
+        links: {
+          next: "https://data.g2.com/api/v1/ahoy/remote-event-streams?page%5Bnumber%5D=1&page%5Bsize%5D=2",
+        },
+      });
+    };
+
+    const result = await runPagination(
+      { ...baseConfig, pagination: { ...baseConfig.pagination, maxPages: 10 }, stopConditions: { stopOnRepeatedNext: true } },
+      { fetcher },
+    );
+
+    expect(calls).toBe(2);
+    expect(result.stopReason).toBe("repeated_next");
+    expect(result.truncated).toBe(true);
+  });
+
+  it("applies delay between pages without saving trace data", async () => {
+    const sleeps: number[] = [];
+    const fetcher = async (input: RequestInfo | URL): Promise<Response> => {
+      const page = new URL(input.toString()).searchParams.get("page[number]");
+      return Response.json({
+        data: [{ id: page }],
+        links: page === "1" ? { next: "https://data.g2.com/api/v1/ahoy/remote-event-streams?page%5Bnumber%5D=2" } : {},
+      });
+    };
+
+    const result = await runPagination(
+      { ...baseConfig, rateLimit: { delayMs: 75, retryAttempts: 0 } },
+      { fetcher, sleeper: async (ms) => { sleeps.push(ms); } },
+    );
+
+    expect(sleeps).toEqual([75]);
+    expect(result.pages).toHaveLength(2);
+  });
+
+  it("flattens JSON:API attributes for Clay-friendly output", async () => {
+    const fetcher = async (): Promise<Response> =>
+      Response.json({
+        data: [{ id: "1", type: "event", attributes: { company: "Clay", score: 99 } }],
+        links: {},
+        meta: { page_count: 1 },
+      });
+
+    const result = await runPagination(
+      {
+        ...baseConfig,
+        pagination: { ...baseConfig.pagination, maxPages: 1 },
+        responseShape: { mode: "jsonapiAttributes" },
+      },
+      { fetcher },
+    );
+
+    expect(result.items).toEqual([{ id: "1", type: "event", company: "Clay", score: 99 }]);
+  });
+
+  it("selects configured fields from each returned item", async () => {
+    const fetcher = async (): Promise<Response> =>
+      Response.json({
+        data: [{ attributes: { company: "Clay", score: 99, ignored: true } }],
+        links: {},
+        meta: { page_count: 1 },
+      });
+
+    const result = await runPagination(
+      {
+        ...baseConfig,
+        pagination: { ...baseConfig.pagination, maxPages: 1 },
+        responseShape: {
+          mode: "select",
+          fields: [
+            { name: "company", path: "attributes.company" },
+            { name: "score", path: "attributes.score" },
+          ],
+        },
+      },
+      { fetcher },
+    );
+
+    expect(result.items).toEqual([{ company: "Clay", score: 99 }]);
+  });
+});
+
+describe("auto detection", () => {
+  it("detects result path and JSON:API next link from one response", async () => {
+    const fetcher = async (): Promise<Response> =>
+      Response.json({
+        data: [{ id: "1" }],
+        links: { next: "https://api.example.com/items?page%5Bnumber%5D=2" },
+        meta: { page_count: 3 },
+      });
+
+    const detection = await detectFromFirstResponse(baseConfig, { fetcher });
+
+    expect(detection.detected.resultPath).toBe("data");
+    expect(detection.detected.paginationType).toBe("jsonapi");
+    expect(detection.detected.nextLinkPath).toBe("links.next");
+    expect(detection.detected.totalPagesPath).toBe("meta.page_count");
+    expect(detection.page.itemCount).toBe(1);
   });
 });

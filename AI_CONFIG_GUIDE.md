@@ -60,6 +60,12 @@ Auth and test:
 - `Suggested test query params`: Temporary query params for testing, including URL placeholders such as `key=test-key`.
 - `Suggested test credential headers`: Temporary header names and example placeholders, not real secrets.
 
+Safety, rate, and shaping:
+
+- `Stop conditions`: Keep `stopOnEmptyPage` and `stopOnRepeatedNext` true unless docs prove otherwise. Use optional `maxDurationMs` or `maxResponseBytes` for especially large APIs.
+- `Rate limit`: Use `retryAttempts: 2`, transient retry statuses `[408,429,500,502,503,504]`, `respectRetryAfter: true`, and the default timeout unless docs give stricter limits.
+- `Response shape`: Use `raw` unless the API is JSON:API and flattening `attributes` will clearly make Clay easier. Use `select` only when the user knows the exact fields Clay needs.
+
 ## Pagination Selection
 
 Use `jsonapi` when docs or examples show:
@@ -133,6 +139,25 @@ Treat current form defaults as examples only. Do not copy defaults into the outp
       { "name": "Content-Type", "value": "application/vnd.api+json" }
     ],
     "bodyTemplate": "",
+    "stopConditions": {
+      "stopOnEmptyPage": true,
+      "stopOnRepeatedNext": true,
+      "stopOnDuplicateItemId": false,
+      "itemIdPath": "id",
+      "maxDurationMs": null,
+      "maxResponseBytes": null
+    },
+    "rateLimit": {
+      "delayMs": 0,
+      "retryAttempts": 2,
+      "retryStatuses": [408, 429, 500, 502, 503, 504],
+      "respectRetryAfter": true,
+      "timeoutMs": 25000
+    },
+    "responseShape": {
+      "mode": "raw",
+      "fields": []
+    },
     "testQueryParams": "",
     "testCredentialHeaders": [
       { "name": "Authorization", "value": "" }

@@ -1,0 +1,2 @@
+ALTER TABLE run_logs ADD COLUMN stop_reason TEXT;
+ALTER TABLE run_logs ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0;

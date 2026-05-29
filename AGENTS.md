@@ -15,6 +15,7 @@ This project is for non-technical users configuring paginated APIs for Clay HTTP
 
 - Do not store API credentials.
 - Do not store Clay call payloads or upstream response data.
+- Do not store page debug traces, auto-detect responses, shaped rows, or upstream error bodies.
 - Do not allow saved configs to be edited or deleted through the app.
 - Keep analytics metadata-only.
 - Return full upstream error bodies to the caller, but never persist them.
