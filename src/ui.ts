@@ -2317,10 +2317,12 @@ export function renderApp(basePath = ""): string {
         "Clay HTTP Sourcing setup",
         "URL: " + url,
         "Method in Clay: GET",
+        "Runner access header, if enabled: x-clay-paginate-token: <runner token>",
         "Authentication headers to send from Clay: " + headers,
         queryText,
         "Expected response: " + response,
         "Response shaping: " + (config.responseShape?.mode || "raw"),
+        "The runner access header is only for calling this Worker and is never forwarded upstream.",
         "Do not put API keys into saved static headers."
       ].join("\\n");
     }

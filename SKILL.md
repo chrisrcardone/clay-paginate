@@ -29,6 +29,8 @@ Generated Clay URLs look like:
 https://paginate.chris-apis.xyz/<config-id>
 ```
 
+Some deployments require Clay to send `x-clay-paginate-token` to call the generated runner URL. That token is for the Worker only and should not be included in the runner's upstream pass-through headers.
+
 ## Do Not
 
 - Do not invent credential values.

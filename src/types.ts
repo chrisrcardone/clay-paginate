@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   ADMIN_TOKEN?: string;
+  RUNNER_AUTH_TOKEN?: string;
   ALLOWED_RUN_CIDRS?: string;
   ALLOWED_UPSTREAM_HOSTS?: string;
 }

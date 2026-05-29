@@ -36,6 +36,7 @@ const HTML_HEADERS = {
 };
 
 const LEGACY_BASE_PATH = "/paginate";
+const RUNNER_AUTH_HEADERS = ["x-clay-paginate-token", "x-runner-token"];
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -163,17 +164,35 @@ function requireAdmin(request: Request, env: Env): void {
 }
 
 function assertRunCallerAllowed(request: Request, env: Env): void {
-  if (isCallerIpAllowed(getClientIp(request), env.ALLOWED_RUN_CIDRS) || hasValidAdminToken(request, env)) {
+  const hasRunCidrGate = Boolean(env.ALLOWED_RUN_CIDRS?.trim());
+  const hasRunTokenGate = Boolean(env.RUNNER_AUTH_TOKEN);
+
+  if (!hasRunCidrGate && !hasRunTokenGate) {
     return;
   }
 
-  throw new HttpError(403, "Caller IP is not allowed for runner execution");
+  if (
+    (hasRunCidrGate && isCallerIpAllowed(getClientIp(request), env.ALLOWED_RUN_CIDRS)) ||
+    (hasRunTokenGate && hasValidRunnerToken(request, env)) ||
+    hasValidAdminToken(request, env)
+  ) {
+    return;
+  }
+
+  throw new HttpError(403, "Caller is not allowed for runner execution");
 }
 
 function hasValidAdminToken(request: Request, env: Env): boolean {
   const expected = env.ADMIN_TOKEN ?? "";
   if (!expected) return false;
   const provided = request.headers.get("x-admin-token") ?? "";
+  return constantTimeEqual(provided, expected);
+}
+
+function hasValidRunnerToken(request: Request, env: Env): boolean {
+  const expected = env.RUNNER_AUTH_TOKEN ?? "";
+  if (!expected) return false;
+  const provided = RUNNER_AUTH_HEADERS.map((name) => request.headers.get(name) ?? "").find(Boolean) ?? "";
   return constantTimeEqual(provided, expected);
 }
 
@@ -287,7 +306,7 @@ async function handleRun(request: Request, env: Env, id: string): Promise<Respon
 
   try {
     const result = await runPagination(config, {
-      incomingHeaders: request.headers,
+      incomingHeaders: stripControlHeaders(request.headers),
       incomingQuery: requestUrl.searchParams,
       incomingBody: body,
       allowedUpstreamHosts: env.ALLOWED_UPSTREAM_HOSTS,
@@ -352,6 +371,11 @@ function validateConfigInput(config: RunnerConfig | undefined, env: Env): assert
     throw new HttpError(400, `Invalid pass-through header name "${invalidPassThrough}"`);
   }
 
+  const reservedPassThrough = (config.passThroughHeaders ?? []).find((header) => isReservedControlHeader(header));
+  if (reservedPassThrough) {
+    throw new HttpError(400, `Pass-through header "${reservedPassThrough}" is reserved by the runner and cannot be forwarded upstream`);
+  }
+
   if (!config.name || config.name.trim().length < 2) {
     throw new HttpError(400, "Name is required");
   }
@@ -383,6 +407,20 @@ function headersFromPairs(pairs: HeaderPair[]): Headers {
     }
   }
   return headers;
+}
+
+function stripControlHeaders(headers: Headers): Headers {
+  const stripped = new Headers(headers);
+  stripped.delete("x-admin-token");
+  for (const name of RUNNER_AUTH_HEADERS) {
+    stripped.delete(name);
+  }
+  return stripped;
+}
+
+function isReservedControlHeader(header: string): boolean {
+  const normalized = header.trim().toLowerCase();
+  return normalized === "x-admin-token" || RUNNER_AUTH_HEADERS.includes(normalized);
 }
 
 function html(markup: string): Response {

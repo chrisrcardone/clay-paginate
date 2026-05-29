@@ -22,6 +22,29 @@ const env = (overrides: Partial<Env> = {}): Env => ({
   ...overrides,
 });
 
+function dbWithConfig(config: RunnerConfig | null): D1Database {
+  const row = config
+    ? {
+      id: config.id ?? "runner-id",
+      name: config.name,
+      target_url: config.targetUrl,
+      target_method: config.method,
+      config_json: JSON.stringify(config),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    : null;
+
+  return {
+    prepare: () => ({
+      bind: () => ({
+        first: async () => row,
+        run: async () => ({ success: true }),
+      }),
+    }),
+  } as unknown as D1Database;
+}
+
 function request(path: string, init: RequestInit = {}): Request {
   return new Request(`https://paginate.chris-apis.xyz${path}`, init);
 }
@@ -123,6 +146,21 @@ describe("security controls", () => {
     expect(response.status).toBe(400);
   });
 
+  it("rejects runner control headers as upstream pass-through headers", async () => {
+    const response = await worker.fetch(
+      request("/api/test", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({
+          config: { ...baseConfig, passThroughHeaders: ["authorization", "x-clay-paginate-token"] },
+        }),
+      }),
+      env(),
+    );
+
+    expect(response.status).toBe(400);
+  });
+
   it("rejects credential-looking body templates", async () => {
     const response = await worker.fetch(
       request("/api/test", {
@@ -144,6 +182,35 @@ describe("security controls", () => {
         headers: { "cf-connecting-ip": "198.51.100.10" },
       }),
       env({ ALLOWED_RUN_CIDRS: "203.0.113.0/24" }),
+    );
+
+    expect(response.status).toBe(403);
+  });
+
+  it("allows runner execution with a dedicated runner token when CIDR does not match", async () => {
+    const response = await worker.fetch(
+      request("/runner-id", {
+        headers: {
+          "cf-connecting-ip": "198.51.100.10",
+          "x-clay-paginate-token": "runner-secret",
+        },
+      }),
+      env({
+        DB: dbWithConfig(null),
+        ALLOWED_RUN_CIDRS: "203.0.113.0/24",
+        RUNNER_AUTH_TOKEN: "runner-secret",
+      }),
+    );
+
+    expect(response.status).toBe(404);
+  });
+
+  it("requires the runner token when token auth is configured without a CIDR gate", async () => {
+    const response = await worker.fetch(
+      request("/runner-id", {
+        headers: { "cf-connecting-ip": "198.51.100.10" },
+      }),
+      env({ RUNNER_AUTH_TOKEN: "runner-secret" }),
     );
 
     expect(response.status).toBe(403);
