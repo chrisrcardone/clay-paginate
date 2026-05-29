@@ -756,6 +756,32 @@ export function renderApp(basePath = ""): string {
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .usage-list {
+      display: grid;
+      gap: 12px;
+    }
+    .usage-row {
+      display: grid;
+      gap: 8px;
+      padding: 14px;
+      border: 0.5px solid var(--border-soft);
+      border-radius: var(--radius-md);
+      background: var(--surface);
+    }
+    .usage-row-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px 12px;
+    }
+    .usage-row-head strong {
+      font-size: 13px;
+    }
+    .usage-note {
+      color: var(--content);
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
     .modal-backdrop {
       position: fixed;
       inset: 0;
@@ -1093,6 +1119,20 @@ export function renderApp(basePath = ""): string {
                 <div class="actions"><button id="detailCopyBtn" type="button">Copy URL</button><button id="detailCopySetupBtn" type="button">Copy Clay setup</button></div>
               </div>
               <div id="detailClaySetup" class="notice"></div>
+              <div class="info-grid">
+                <div class="url-box">
+                  <strong>Runner management link</strong>
+                  <code id="detailDeepLinkText"></code>
+                  <div class="hint">Use this URL to open this saved runner directly.</div>
+                  <div class="actions"><button id="detailCopyDeepLinkBtn" type="button">Copy runner link</button></div>
+                </div>
+                <div class="url-box">
+                  <strong>Analytics deep link</strong>
+                  <code id="detailAnalyticsLinkText"></code>
+                  <div class="hint">Use this URL when sharing call-volume and status-code analytics.</div>
+                  <div class="actions"><button id="detailCopyAnalyticsLinkBtn" type="button">Copy analytics link</button></div>
+                </div>
+              </div>
               <div class="link-row">
                 <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/index.ts" target="_blank" rel="noreferrer">Worker routes</a>
                 <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/pagination.ts" target="_blank" rel="noreferrer">Pagination logic</a>
@@ -1127,6 +1167,23 @@ export function renderApp(basePath = ""): string {
                 <div id="runnerTokenRotationCue" class="hint">If a token is compromised or needs to be rotated, review the regeneration warnings first. The destructive action only appears inside the confirmation modal.</div>
                 <div id="runnerTokenStatus" class="status"></div>
               </div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Workspace Usage Log</h2></div>
+            <div class="panel-body">
+              <div class="notice">
+                <strong>Manual usage notes</strong>
+                <div class="hint">Record where this runner is used before handing it to Clay teams. This is admin-only notation for future token rotations; it is never filled from runtime calls and should not contain credentials.</div>
+              </div>
+              <div class="grid-3">
+                <label><span class="label-row">Workspace ID <span class="help" tabindex="0" data-tooltip="Clay workspace ID or a stable workspace identifier where this runner is used.">?</span></span><input id="usageWorkspaceId" autocomplete="off" placeholder="workspace_id"></label>
+                <label><span class="label-row">Your name <span class="help" tabindex="0" data-tooltip="Who is adding this note, so future maintainers know who to contact first.">?</span></span><input id="usageAddedBy" autocomplete="off" placeholder="Name"></label>
+                <label><span class="label-row">Where it is used <span class="help" tabindex="0" data-tooltip="Example: Signals table name, Clay workflow, owner/channel, or the person to notify before token rotation. Do not paste tokens or credentials.">?</span></span><textarea id="usageNote" spellcheck="true" placeholder="Signals table, owner, Slack channel, or rotation notes"></textarea></label>
+              </div>
+              <div class="actions"><button id="addUsageNoteBtn" type="button">Add usage note</button><div id="usageNoteStatus" class="status"></div></div>
+              <div id="usageNotesList" class="usage-list"></div>
             </div>
           </section>
 
@@ -1253,7 +1310,7 @@ export function renderApp(basePath = ""): string {
   <script>
     const BASE_PATH = ${JSON.stringify(basePath)};
     const ADMIN_TOKEN_STORAGE_KEY = "clay-pagination-admin-token";
-    const state = { id: null, locked: false, view: "list", step: "ai", lastTestOk: false, configs: [], detailRunUrl: "", runnerTokenGenerate: false };
+    const state = { id: null, locked: false, view: "list", step: "ai", lastTestOk: false, configs: [], detailRunUrl: "", detailUrl: "", analyticsUrl: "", runnerTokenGenerate: false };
     const $ = (id) => document.getElementById(id);
     const editableIds = ["name","method","targetUrl","resultPath","responseMode","maxItems","paginationType","maxPages","pageSize","pageParam","pageSizeParam","startPage","nextLinkPath","totalPagesPath","offsetParam","limitParam","startOffset","cursorParam","nextCursorPath","initialCursor","shapeMode","shapeFields","delayMs","retryAttempts","timeoutMs","retryStatuses","maxDurationMs","maxResponseBytes","respectRetryAfter","stopOnEmptyPage","stopOnRepeatedNext","stopOnDuplicateItemId","itemIdPath","passThroughHeaders","bodyTemplate"];
     const defaults = {
@@ -1481,6 +1538,48 @@ export function renderApp(basePath = ""): string {
       $("adminTokenModal").hidden = true;
     }
 
+    function getDetailUrl(id) {
+      const url = new URL(window.location.href);
+      url.pathname = BASE_PATH ? (BASE_PATH.endsWith("/") ? BASE_PATH : BASE_PATH + "/") : "/";
+      url.search = "";
+      url.searchParams.set("runner", id);
+      return url.toString();
+    }
+
+    function getAnalyticsUrl(id) {
+      const url = new URL(getDetailUrl(id));
+      url.searchParams.set("view", "analytics");
+      return url.toString();
+    }
+
+    function updateDeepLink(view, id, replace = false) {
+      const url = new URL(window.location.href);
+      url.pathname = BASE_PATH ? (BASE_PATH.endsWith("/") ? BASE_PATH : BASE_PATH + "/") : "/";
+      url.search = "";
+      if (id) {
+        url.searchParams.set("runner", id);
+        if (view === "analytics") url.searchParams.set("view", "analytics");
+      }
+      const method = replace ? "replaceState" : "pushState";
+      window.history[method]({}, "", url);
+    }
+
+    async function loadFromUrl(replace = true) {
+      const params = new URLSearchParams(window.location.search);
+      const runnerId = params.get("runner");
+      const view = params.get("view");
+      if (!runnerId) {
+        await refreshList();
+        showView("list");
+        updateDeepLink("list", null, replace);
+        return;
+      }
+      await openDetails(runnerId, { replace });
+      if (view === "analytics") {
+        await openAnalytics({ replace: true });
+      }
+    }
+
     function showView(view) {
       state.view = view;
       $("listView").hidden = view !== "list";
@@ -1518,6 +1617,8 @@ export function renderApp(basePath = ""): string {
       applyConfig(defaults);
       state.id = null;
       state.locked = false;
+      state.detailUrl = "";
+      state.analyticsUrl = "";
       state.lastTestOk = false;
       setLocked(false);
       setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
@@ -1533,6 +1634,7 @@ export function renderApp(basePath = ""): string {
       setStatus("", true);
       setWizardStep("ai");
       showView("create");
+      updateDeepLink("create", null);
     }
 
     function buildAiPrompt() {
@@ -2578,17 +2680,76 @@ export function renderApp(basePath = ""): string {
       $("runnerTokenStatus").className = "status " + (ok ? "ok" : "err");
     }
 
-    async function openDetails(id) {
+    function setUsageNoteStatus(message, ok = true) {
+      $("usageNoteStatus").textContent = message;
+      $("usageNoteStatus").className = "status " + (ok ? "ok" : "err");
+    }
+
+    function renderUsageNotes(notes = []) {
+      const list = $("usageNotesList");
+      list.innerHTML = "";
+      if (!notes.length) {
+        list.innerHTML = '<div class="hint">No workspace usage notes yet. Add the first note before sharing this runner broadly.</div>';
+        return;
+      }
+      notes.forEach((note) => {
+        const row = document.createElement("div");
+        row.className = "usage-row";
+        row.innerHTML = '<div class="usage-row-head"><strong></strong><span class="badge"></span><span class="hint"></span></div><div class="usage-note"></div>';
+        row.querySelector("strong").textContent = note.workspaceId;
+        row.querySelector(".badge").textContent = note.addedBy;
+        row.querySelector(".hint").textContent = formatFullTimestamp(note.createdAt);
+        row.querySelector(".usage-note").textContent = note.note;
+        list.appendChild(row);
+      });
+    }
+
+    async function refreshUsageNotes() {
+      if (!state.id) return;
+      const body = await api("/api/configs/" + state.id + "/usage-notes");
+      renderUsageNotes(body.usageNotes || []);
+    }
+
+    async function addUsageNote() {
+      if (!state.id) return;
+      const workspaceId = $("usageWorkspaceId").value.trim();
+      const addedBy = $("usageAddedBy").value.trim();
+      const note = $("usageNote").value.trim();
+      if (!workspaceId || !addedBy || !note) {
+        setUsageNoteStatus("Workspace ID, name, and usage note are required.", false);
+        return;
+      }
+      setUsageNoteStatus("Adding usage note...");
+      setButtonBusy("addUsageNoteBtn", true, "Adding");
+      try {
+        const body = await api("/api/configs/" + state.id + "/usage-notes", {
+          method: "POST",
+          body: JSON.stringify({ workspaceId, addedBy, note })
+        });
+        $("usageWorkspaceId").value = "";
+        $("usageNote").value = "";
+        renderUsageNotes(body.usageNotes || [body.usageNote].filter(Boolean));
+        setUsageNoteStatus("Usage note added.");
+      } finally {
+        setButtonBusy("addUsageNoteBtn", false);
+      }
+    }
+
+    async function openDetails(id, options = {}) {
       const loadingId = state.view === "details" ? "detailLoading" : "listLoading";
       setLoadingLine(loadingId, true, "Loading runner details...");
       try {
         const detail = await api("/api/configs/" + id);
         applyConfig(detail.config);
         state.detailRunUrl = detail.runUrl;
+        state.detailUrl = detail.detailUrl || getDetailUrl(id);
+        state.analyticsUrl = detail.analyticsUrl || getAnalyticsUrl(id);
         $("detailName").textContent = detail.config.name;
         $("detailMethod").textContent = detail.config.method;
         $("detailPagination").textContent = detail.config.pagination?.type || "runner";
         $("detailRunUrlText").textContent = detail.runUrl;
+        $("detailDeepLinkText").textContent = state.detailUrl;
+        $("detailAnalyticsLinkText").textContent = state.analyticsUrl;
         $("detailClaySetup").textContent = buildClaySetup(detail.runUrl, detail.config);
         $("detailTargetUrl").textContent = detail.config.targetUrl;
         $("detailMethodValue").textContent = detail.config.method;
@@ -2598,16 +2759,20 @@ export function renderApp(basePath = ""): string {
         $("detailPageSize").textContent = detail.config.pagination?.pageSize || "Not set";
         $("detailShapeMode").textContent = detail.config.responseShape?.mode || "raw";
         renderRunnerTokenStatus(detail.runnerToken);
+        renderUsageNotes(detail.usageNotes || []);
+        setUsageNoteStatus("");
         $("analyticsTitle").textContent = detail.config.name + " analytics";
         showView("details");
+        updateDeepLink("details", id, Boolean(options.replace));
       } finally {
         setLoadingLine(loadingId, false);
       }
     }
 
-    async function openAnalytics() {
+    async function openAnalytics(options = {}) {
       if (!state.id) return;
       showView("analytics");
+      updateDeepLink("analytics", state.id, Boolean(options.replace));
       await refreshAnalytics();
     }
 
@@ -2813,7 +2978,7 @@ export function renderApp(basePath = ""): string {
       $("adminToken").value = "";
       hydrateAdminTokenState();
       $("adminTokenModal").hidden = true;
-      refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
+      loadFromUrl().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
     });
     $("clearAdminTokenBtn").addEventListener("click", () => {
       localStorage.removeItem(ADMIN_TOKEN_STORAGE_KEY);
@@ -2826,12 +2991,17 @@ export function renderApp(basePath = ""): string {
     $("backToListBtn").addEventListener("click", () => {
       refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
       showView("list");
+      updateDeepLink("list", null);
     });
     $("detailsBackBtn").addEventListener("click", () => {
       refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
       showView("list");
+      updateDeepLink("list", null);
     });
-    $("analyticsBackBtn").addEventListener("click", () => showView("details"));
+    $("analyticsBackBtn").addEventListener("click", () => {
+      showView("details");
+      if (state.id) updateDeepLink("details", state.id);
+    });
     $("skipAiBtn").addEventListener("click", () => setWizardStep("configure"));
     $("aiContinueBtn").addEventListener("click", () => setWizardStep("configure"));
     $("configureBackBtn").addEventListener("click", () => setWizardStep("ai"));
@@ -2855,7 +3025,7 @@ export function renderApp(basePath = ""): string {
     });
     $("reviewBackBtn").addEventListener("click", () => setWizardStep("test"));
     $("refreshBtn").addEventListener("click", () => {
-      const action = state.view === "details" && state.id ? openDetails(state.id) : refreshList();
+      const action = state.view === "details" && state.id ? openDetails(state.id, { replace: true }) : refreshList();
       action.catch((error) => handleUiError(error, "Refresh", { showLastError: state.view === "create" }));
     });
     $("openAnalyticsBtn").addEventListener("click", () => openAnalytics().catch((error) => handleUiError(error, "Loading analytics", { showLastError: false })));
@@ -2867,6 +3037,7 @@ export function renderApp(basePath = ""): string {
     $("cancelRunnerTokenRegenBtn").addEventListener("click", closeRunnerTokenModals);
     $("confirmRunnerTokenEmailBtn").addEventListener("click", () => emailRunnerToken().catch((error) => handleUiError(error, "Emailing runner token", { showLastError: false })));
     $("confirmRunnerTokenRegenBtn").addEventListener("click", () => regenerateRunnerToken().catch((error) => handleUiError(error, "Regenerating runner token", { showLastError: false })));
+    $("addUsageNoteBtn").addEventListener("click", () => addUsageNote().catch((error) => handleUiError(error, "Adding usage note", { showLastError: false })));
     $("addStaticHeader").addEventListener("click", () => { addHeaderRow("staticHeaders"); markConfigDirty(); });
     $("addCredentialHeader").addEventListener("click", () => { addHeaderRow("credentialHeaders"); markConfigDirty(); });
     $("paginationType").addEventListener("change", () => { updatePaginationFields(); markConfigDirty(); });
@@ -2888,6 +3059,14 @@ export function renderApp(basePath = ""): string {
     $("detailCopySetupBtn").addEventListener("click", async () => {
       await navigator.clipboard.writeText($("detailClaySetup").textContent || buildClaySetup($("detailRunUrlText").textContent));
       setStatus("Setup copied", true);
+    });
+    $("detailCopyDeepLinkBtn").addEventListener("click", async () => {
+      await navigator.clipboard.writeText($("detailDeepLinkText").textContent);
+      setStatus("Runner link copied", true);
+    });
+    $("detailCopyAnalyticsLinkBtn").addEventListener("click", async () => {
+      await navigator.clipboard.writeText($("detailAnalyticsLinkText").textContent);
+      setStatus("Analytics link copied", true);
     });
 
     $("generatePromptBtn").addEventListener("click", generatePrompt);
@@ -2918,8 +3097,13 @@ export function renderApp(basePath = ""): string {
     setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
     updateUrlShape();
     hydrateAdminTokenState();
+    window.addEventListener("popstate", () => {
+      if (localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)) {
+        loadFromUrl(true).catch((error) => handleUiError(error, "Loading link", { showLastError: false }));
+      }
+    });
     if (localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)) {
-      refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
+      loadFromUrl(true).catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
     } else {
       showAdminTokenModal(true);
     }

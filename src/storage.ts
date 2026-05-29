@@ -1,5 +1,5 @@
 import { normalizeConfig } from "./pagination";
-import type { RunAnalytics, RunLogSummary, RunnerConfig, RunnerTokenStatus, SavedConfigRow } from "./types";
+import type { RunAnalytics, RunLogSummary, RunnerConfig, RunnerTokenStatus, RunnerUsageNote, SavedConfigRow } from "./types";
 
 export class DuplicateConfigError extends Error {
   constructor(
@@ -25,6 +25,8 @@ export interface ConfigSummary {
   method: string;
   paginationType: string;
   runUrl: string;
+  detailUrl: string;
+  analyticsUrl: string;
   totalCalls: number;
   clayCalls: number;
   lastRunAt: string | null;
@@ -79,6 +81,8 @@ function toConfigSummary(row: SavedConfigRow, publicBaseUrl: string): ConfigSumm
     method: row.target_method,
     paginationType: parsed?.pagination?.type ?? "runner",
     runUrl: `${publicBaseUrl}/${row.id}`,
+    detailUrl: `${publicBaseUrl}/?runner=${encodeURIComponent(row.id)}`,
+    analyticsUrl: `${publicBaseUrl}/?runner=${encodeURIComponent(row.id)}&view=analytics`,
     totalCalls: Number(row.total_calls ?? 0),
     clayCalls: Number(row.clay_calls ?? 0),
     lastRunAt: row.last_run_at ?? null,
@@ -182,6 +186,57 @@ export async function markRunnerTokenEmailed(db: D1Database, configId: string): 
   return getRunnerTokenStatus(db, configId);
 }
 
+export async function listRunnerUsageNotes(db: D1Database, configId: string): Promise<RunnerUsageNote[]> {
+  const result = await db
+    .prepare(
+      `SELECT id, config_id, workspace_id, added_by, note, created_at
+       FROM runner_usage_notes
+       WHERE config_id = ?
+       ORDER BY created_at DESC
+       LIMIT 100`,
+    )
+    .bind(configId)
+    .all<{
+      id: string;
+      config_id: string;
+      workspace_id: string;
+      added_by: string;
+      note: string;
+      created_at: string;
+    }>();
+
+  return (result.results ?? []).map(toRunnerUsageNote);
+}
+
+export async function addRunnerUsageNote(
+  db: D1Database,
+  input: {
+    configId: string;
+    workspaceId: string;
+    addedBy: string;
+    note: string;
+  },
+): Promise<RunnerUsageNote> {
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+  await db
+    .prepare(
+      `INSERT INTO runner_usage_notes (id, config_id, workspace_id, added_by, note, created_at)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    )
+    .bind(id, input.configId, input.workspaceId, input.addedBy, input.note, now)
+    .run();
+
+  return {
+    id,
+    configId: input.configId,
+    workspaceId: input.workspaceId,
+    addedBy: input.addedBy,
+    note: input.note,
+    createdAt: now,
+  };
+}
+
 export async function saveConfig(db: D1Database, config: RunnerConfig): Promise<RunnerConfig> {
   if (config.id) {
     throw new ImmutableConfigError();
@@ -217,6 +272,24 @@ function toRunnerTokenStatus(record: RunnerTokenRecord | null): RunnerTokenStatu
     updatedAt: record?.updatedAt ?? null,
     rotatedAt: record?.rotatedAt ?? null,
     emailedAt: record?.emailedAt ?? null,
+  };
+}
+
+function toRunnerUsageNote(row: {
+  id: string;
+  config_id: string;
+  workspace_id: string;
+  added_by: string;
+  note: string;
+  created_at: string;
+}): RunnerUsageNote {
+  return {
+    id: row.id,
+    configId: row.config_id,
+    workspaceId: row.workspace_id,
+    addedBy: row.added_by,
+    note: row.note,
+    createdAt: row.created_at,
   };
 }
 

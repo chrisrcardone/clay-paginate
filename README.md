@@ -36,6 +36,8 @@ The Worker stores target URL, method, headers that are safe to persist, pass-thr
 
 Analytics are metadata-only and stored against each configuration: run mode, status, page count, item count, duration, upstream status code, stop reason, retry count, timestamp, and coarse error code. The Worker does not persist Clay headers, query params, request bodies, upstream URLs, upstream response bodies, upstream error bodies, page traces, test samples, or returned rows.
 
+Saved runner details also include an admin-only workspace usage log. This is manually entered notation only: workspace ID, the person adding the note, a comment about where the runner is used, and timestamp. It is intended to help teams coordinate token rotations and is never populated from Clay calls.
+
 When an upstream API returns an error, the Worker returns the full upstream body to the caller. That body is never stored.
 
 ## Configuration uniqueness
@@ -101,7 +103,7 @@ npm run db:migrate:remote
 npm run deploy
 ```
 
-The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. Generated Clay URLs use `https://paginate.chris-apis.xyz/<config-id>`.
+The Worker is configured to serve the UI at `https://paginate.chris-apis.xyz`. Generated Clay URLs use `https://paginate.chris-apis.xyz/<config-id>`. Admin deep links use `https://paginate.chris-apis.xyz/?runner=<config-id>`, and analytics deep links use `https://paginate.chris-apis.xyz/?runner=<config-id>&view=analytics`.
 
 Admin APIs fail closed unless `ADMIN_TOKEN` is configured. Paste the same token into the app's Admin token field to list, test, create, and inspect runners. The public `/<config-id>` Clay run URLs do not require the admin token by default because Clay needs to call them directly.
 
@@ -142,7 +144,7 @@ Optional production hardening:
 
 ## Clay usage
 
-Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs. After saving, open the runner details screen for the Clay setup copy block, immutable configuration details, metadata-only analytics, and recent run summaries.
+Use the generated `https://paginate.chris-apis.xyz/<config-id>` URL as the HTTP Sourcing URL. Configure Clay's header token authentication for header-based upstream API credentials. Any non-placeholder query parameters Clay appends to the generated URL are merged into the upstream request before pagination runs. After saving, open the runner details deep link for the Clay setup copy block, immutable configuration details, workspace usage log, metadata-only analytics link, and recent run summaries.
 
 If the runner has a runner access token, add this Clay request header alongside any upstream credential headers:
 
@@ -152,4 +154,4 @@ x-clay-paginate-token: <runner token>
 
 Do not add `x-clay-paginate-token` to the runner's pass-through headers. It authenticates Clay to this Worker only and is stripped before upstream requests.
 
-Regenerating a runner token invalidates the previous token for that runner. Any Clay Signals or workflows using the old token will fail until updated.
+Regenerating a runner token invalidates the previous token for that runner. Any Clay Signals or workflows using the old token will fail until updated. Check the workspace usage log before rotating so the right workspace owners can be notified.

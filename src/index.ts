@@ -11,10 +11,12 @@ import { renderApp } from "./ui";
 import {
   DuplicateConfigError,
   ImmutableConfigError,
+  addRunnerUsageNote,
   getAnalytics,
   getConfig,
   getRunnerTokenRecord,
   getRunnerTokenStatus,
+  listRunnerUsageNotes,
   listConfigs,
   logRun,
   markRunnerTokenEmailed,
@@ -99,6 +101,17 @@ export default {
       if (analyticsMatch && request.method === "GET") {
         requireAdmin(request, env);
         return await handleAnalytics(env, analyticsMatch[1]);
+      }
+
+      const usageMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/usage-notes$/);
+      if (usageMatch && request.method === "GET") {
+        requireAdmin(request, env);
+        return await handleListUsageNotes(env, usageMatch[1]);
+      }
+
+      if (usageMatch && request.method === "POST") {
+        requireAdmin(request, env);
+        return await handleAddUsageNote(request, env, usageMatch[1]);
       }
 
       const tokenEmailMatch = route.appPath.match(/^\/api\/configs\/([^/]+)\/runner-token\/email$/);
@@ -307,6 +320,8 @@ async function handleSave(request: Request, env: Env, publicBaseUrl: string): Pr
   return json({
     config,
     runUrl: `${publicBaseUrl}/${config.id}`,
+    detailUrl: buildDetailUrl(publicBaseUrl, config.id ?? ""),
+    analyticsUrl: buildAnalyticsUrl(publicBaseUrl, config.id ?? ""),
   });
 }
 
@@ -319,8 +334,35 @@ async function handleGet(env: Env, id: string, publicBaseUrl: string): Promise<R
   return json({
     config,
     runUrl: `${publicBaseUrl}/${config.id}`,
+    detailUrl: buildDetailUrl(publicBaseUrl, id),
+    analyticsUrl: buildAnalyticsUrl(publicBaseUrl, id),
     runnerToken: await getRunnerTokenStatus(env.DB, id),
+    usageNotes: await listRunnerUsageNotes(env.DB, id),
   });
+}
+
+async function handleListUsageNotes(env: Env, id: string): Promise<Response> {
+  const config = await getConfig(env.DB, id);
+  if (!config) {
+    return json({ error: "Config not found" }, 404);
+  }
+
+  return json({ usageNotes: await listRunnerUsageNotes(env.DB, id) });
+}
+
+async function handleAddUsageNote(request: Request, env: Env, id: string): Promise<Response> {
+  const config = await getConfig(env.DB, id);
+  if (!config) {
+    return json({ error: "Config not found" }, 404);
+  }
+
+  const body = await request.json<{ workspaceId?: string; addedBy?: string; note?: string }>();
+  const input = normalizeUsageNoteInput(body);
+  const usageNote = await addRunnerUsageNote(env.DB, {
+    configId: id,
+    ...input,
+  });
+  return json({ usageNote, usageNotes: await listRunnerUsageNotes(env.DB, id) });
 }
 
 async function handleRun(request: Request, env: Env, id: string): Promise<Response> {
@@ -409,6 +451,8 @@ async function handleEmailRunnerToken(request: Request, env: Env, id: string, pu
     recipient,
     token,
     runUrl: `${publicBaseUrl}/${id}`,
+    detailUrl: buildDetailUrl(publicBaseUrl, id),
+    analyticsUrl: buildAnalyticsUrl(publicBaseUrl, id),
     runnerName: config.name,
     regenerated: false,
   });
@@ -434,6 +478,8 @@ async function handleRegenerateRunnerToken(request: Request, env: Env, id: strin
     recipient,
     token,
     runUrl: `${publicBaseUrl}/${id}`,
+    detailUrl: buildDetailUrl(publicBaseUrl, id),
+    analyticsUrl: buildAnalyticsUrl(publicBaseUrl, id),
     runnerName: config.name,
     regenerated: true,
   });
@@ -488,6 +534,8 @@ async function sendRunnerTokenEmail(
     recipient: string;
     token: string;
     runUrl: string;
+    detailUrl: string;
+    analyticsUrl: string;
     runnerName: string;
     regenerated: boolean;
   },
@@ -502,6 +550,8 @@ async function sendRunnerTokenEmail(
   const text = [
     `Runner: ${input.runnerName}`,
     `Runner URL: ${input.runUrl}`,
+    `Runner management link: ${input.detailUrl}`,
+    `Analytics link: ${input.analyticsUrl}`,
     "",
     "Use this request header when Clay calls the generated runner URL:",
     `x-clay-paginate-token: ${input.token}`,
@@ -515,6 +565,8 @@ async function sendRunnerTokenEmail(
       <h2>Clay Pagination Runner token</h2>
       <p><strong>Runner:</strong> ${escapeHtml(input.runnerName)}</p>
       <p><strong>Runner URL:</strong> <a href="${escapeHtml(input.runUrl)}">${escapeHtml(input.runUrl)}</a></p>
+      <p><strong>Runner management:</strong> <a href="${escapeHtml(input.detailUrl)}">${escapeHtml(input.detailUrl)}</a></p>
+      <p><strong>Analytics:</strong> <a href="${escapeHtml(input.analyticsUrl)}">${escapeHtml(input.analyticsUrl)}</a></p>
       <p>Use this request header when Clay calls the generated runner URL:</p>
       <pre style="padding:12px;background:#f4f6f8;border:1px solid #d6d9df;border-radius:6px;white-space:pre-wrap">x-clay-paginate-token: ${escapeHtml(input.token)}</pre>
       <p>This token authenticates Clay to the pagination runner only. It is stripped before upstream API requests and is not an upstream API credential.</p>
@@ -537,6 +589,54 @@ function normalizeClayEmail(value: string | undefined): string {
     throw new HttpError(400, "Runner tokens can only be emailed to a clay.com address");
   }
   return email;
+}
+
+function buildDetailUrl(publicBaseUrl: string, id: string): string {
+  return `${publicBaseUrl}/?runner=${encodeURIComponent(id)}`;
+}
+
+function buildAnalyticsUrl(publicBaseUrl: string, id: string): string {
+  return `${buildDetailUrl(publicBaseUrl, id)}&view=analytics`;
+}
+
+function normalizeUsageNoteInput(body: { workspaceId?: string; addedBy?: string; note?: string }): {
+  workspaceId: string;
+  addedBy: string;
+  note: string;
+} {
+  const workspaceId = normalizeSingleLine(body.workspaceId, "Workspace ID", 120);
+  const addedBy = normalizeSingleLine(body.addedBy, "Name", 120);
+  const note = normalizeMultiLine(body.note, "Usage note", 1000);
+  assertUsageNoteDoesNotLookSensitive(`${workspaceId}\n${addedBy}\n${note}`);
+  return { workspaceId, addedBy, note };
+}
+
+function normalizeSingleLine(value: string | undefined, label: string, maxLength: number): string {
+  const normalized = (value ?? "").replace(/\s+/g, " ").trim();
+  if (!normalized) {
+    throw new HttpError(400, `${label} is required`);
+  }
+  if (normalized.length > maxLength) {
+    throw new HttpError(400, `${label} must be ${maxLength} characters or fewer`);
+  }
+  return normalized;
+}
+
+function normalizeMultiLine(value: string | undefined, label: string, maxLength: number): string {
+  const normalized = (value ?? "").replace(/\r\n?/g, "\n").trim();
+  if (!normalized) {
+    throw new HttpError(400, `${label} is required`);
+  }
+  if (normalized.length > maxLength) {
+    throw new HttpError(400, `${label} must be ${maxLength} characters or fewer`);
+  }
+  return normalized;
+}
+
+function assertUsageNoteDoesNotLookSensitive(value: string): void {
+  if (/(cpr_[A-Za-z0-9_-]{20,}|bearer\s+[A-Za-z0-9._~+/=-]{20,}|api[_ -]?key\s*[:=]\s*\S{8,}|token\s*[:=]\s*\S{8,}|secret\s*[:=]\s*\S{8,})/i.test(value)) {
+    throw new HttpError(400, "Usage notes must not contain credentials, tokens, or secrets");
+  }
 }
 
 function escapeHtml(value: string): string {

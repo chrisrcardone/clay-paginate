@@ -155,6 +155,15 @@ export interface RunnerTokenStatus {
   emailedAt: string | null;
 }
 
+export interface RunnerUsageNote {
+  id: string;
+  configId: string;
+  workspaceId: string;
+  addedBy: string;
+  note: string;
+  createdAt: string;
+}
+
 export interface PageDebug {
   page: number;
   url: string;

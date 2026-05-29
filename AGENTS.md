@@ -44,5 +44,7 @@ For deployment smoke tests, verify:
 - `POST https://paginate.chris-apis.xyz/api/configs`
 - `GET https://paginate.chris-apis.xyz/<config-id>?key=...`
 - `GET https://paginate.chris-apis.xyz/api/configs/<config-id>/analytics`
+- `GET/POST https://paginate.chris-apis.xyz/api/configs/<config-id>/usage-notes`
+- UI deep links: `https://paginate.chris-apis.xyz/?runner=<config-id>` and `https://paginate.chris-apis.xyz/?runner=<config-id>&view=analytics`
 
 Clean up smoke configs from D1 after remote tests.

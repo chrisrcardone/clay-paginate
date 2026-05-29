@@ -36,6 +36,7 @@ function dbWithConfig(config: RunnerConfig | null, tokenRowInput: Record<string,
     }
     : null;
   let tokenRow = tokenRowInput;
+  let usageRows: Record<string, unknown>[] = [];
 
   return {
     prepare: (sql: string) => ({
@@ -61,9 +62,25 @@ function dbWithConfig(config: RunnerConfig | null, tokenRowInput: Record<string,
           if (sql.includes("UPDATE runner_tokens SET emailed_at")) {
             tokenRow = tokenRow ? { ...tokenRow, emailed_at: args[0], updated_at: args[1] } : tokenRow;
           }
+          if (sql.includes("INSERT INTO runner_usage_notes")) {
+            usageRows = [
+              {
+                id: args[0],
+                config_id: args[1],
+                workspace_id: args[2],
+                added_by: args[3],
+                note: args[4],
+                created_at: args[5],
+              },
+              ...usageRows,
+            ];
+          }
           return { success: true };
         },
-        all: async () => ({ results: [] }),
+        all: async () => {
+          if (sql.includes("FROM runner_usage_notes")) return { results: usageRows };
+          return { results: [] };
+        },
       }),
     }),
   } as unknown as D1Database;
@@ -310,6 +327,64 @@ describe("security controls", () => {
     expect(sent).toHaveLength(1);
     expect(JSON.stringify(sent[0])).toContain("person@clay.com");
     expect(JSON.stringify(sent[0])).toContain("x-clay-paginate-token: cpr_");
+    expect(JSON.stringify(sent[0])).toContain("?runner=runner-id");
+    expect(JSON.stringify(sent[0])).toContain("view=analytics");
+  });
+
+  it("requires admin auth for usage-note reads", async () => {
+    const response = await worker.fetch(
+      request("/api/configs/runner-id/usage-notes"),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }) }),
+    );
+
+    expect(response.status).toBe(401);
+  });
+
+  it("adds manual runner usage notes for token-rotation coordination", async () => {
+    const response = await worker.fetch(
+      request("/api/configs/runner-id/usage-notes", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({
+          workspaceId: "workspace_123",
+          addedBy: "Chris",
+          note: "Signals table used by EGS. Notify #signals-ops before rotation.",
+        }),
+      }),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }) }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      usageNote: {
+        configId: "runner-id",
+        workspaceId: "workspace_123",
+        addedBy: "Chris",
+        note: "Signals table used by EGS. Notify #signals-ops before rotation.",
+      },
+      usageNotes: [
+        {
+          workspaceId: "workspace_123",
+        },
+      ],
+    });
+  });
+
+  it("rejects credential-looking usage notes", async () => {
+    const response = await worker.fetch(
+      request("/api/configs/runner-id/usage-notes", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-admin-token": "admin-secret" },
+        body: JSON.stringify({
+          workspaceId: "workspace_123",
+          addedBy: "Chris",
+          note: "token: abcdefghijklmnopqrstuvwxyz",
+        }),
+      }),
+      env({ DB: dbWithConfig({ ...baseConfig, id: "runner-id" }) }),
+    );
+
+    expect(response.status).toBe(400);
   });
 
   it("requires explicit acknowledgement before regenerating runner tokens", async () => {
