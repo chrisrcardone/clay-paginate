@@ -40,8 +40,9 @@ export function renderApp(basePath = ""): string {
       color: var(--content);
       font-family: var(--font-sans);
       font-size: 14px;
-      line-height: 1.45;
+      line-height: 1.55;
     }
+    [hidden] { display: none !important; }
     header {
       height: 48px;
       display: flex;
@@ -93,42 +94,51 @@ export function renderApp(basePath = ""): string {
       padding: 0;
     }
     .app-view {
-      max-width: 1180px;
+      max-width: 1240px;
       margin: 0 auto;
-      padding: 24px;
+      padding: 36px 32px 48px;
     }
     .app-view[hidden] { display: none; }
     .view-head {
       display: flex;
       align-items: flex-start;
       justify-content: space-between;
-      gap: 16px;
-      padding: 22px 0 18px;
+      gap: 28px;
+      padding: 18px 0 30px;
     }
     .view-head h2 {
       font-size: 24px;
       line-height: 1.2;
     }
     .view-subtitle {
-      margin-top: 4px;
+      margin-top: 8px;
       color: var(--secondary);
       font-size: 14px;
       font-weight: 500;
+      max-width: 760px;
+    }
+    .view-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-top: 2px;
     }
     .overview {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      padding: 16px 0 22px;
+      gap: 18px;
+      padding: 8px 0 30px;
     }
     .overview-card {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 14px;
       border: 0.5px solid var(--border);
       border-radius: var(--radius-lg);
       background: var(--surface);
-      padding: 16px;
+      padding: 20px;
     }
     .overview-icon {
       display: grid;
@@ -157,19 +167,19 @@ export function renderApp(basePath = ""): string {
     }
     .runner-list {
       display: grid;
-      gap: 12px;
+      gap: 18px;
     }
     .runner-card {
       width: 100%;
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
-      gap: 14px;
+      gap: 18px;
       align-items: start;
       text-align: left;
       border: 0.5px solid var(--border);
       border-radius: var(--radius-lg);
       background: var(--surface);
-      padding: 18px;
+      padding: 24px;
     }
     .runner-card:hover:not(:disabled) {
       background: var(--surface);
@@ -223,13 +233,13 @@ export function renderApp(basePath = ""): string {
     }
     .wizard-wrap {
       display: grid;
-      gap: 20px;
+      gap: 28px;
     }
     .progress {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 10px;
-      padding: 14px;
+      gap: 14px;
+      padding: 18px;
       border: 0.5px solid var(--border);
       border-radius: var(--radius-lg);
       background: var(--surface);
@@ -260,18 +270,18 @@ export function renderApp(basePath = ""): string {
     .wizard-nav {
       display: flex;
       justify-content: space-between;
-      gap: 12px;
-      margin-top: 2px;
+      gap: 18px;
+      margin-top: 14px;
     }
     .detail-grid {
       display: grid;
-      grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
-      gap: 18px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 28px;
       align-items: start;
     }
     .detail-stack {
       display: grid;
-      gap: 14px;
+      gap: 28px;
     }
     .detail-row {
       display: grid;
@@ -280,7 +290,7 @@ export function renderApp(basePath = ""): string {
     .review-grid {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
+      gap: 18px;
     }
     .panel {
       background: var(--surface);
@@ -292,26 +302,26 @@ export function renderApp(basePath = ""): string {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 12px;
-      padding: 16px 18px;
+      gap: 18px;
+      padding: 22px 26px;
       border-bottom: 0.5px solid var(--border-soft);
     }
     .panel-body {
       display: grid;
-      gap: 20px;
-      padding: 18px;
+      gap: 28px;
+      padding: 26px;
     }
     .section {
       display: grid;
-      gap: 16px;
-      padding: 18px;
+      gap: 22px;
+      padding: 26px;
       border: 0.5px solid var(--border-soft);
       border-radius: var(--radius-lg);
       background: var(--surface);
     }
     .pagination-group {
       display: grid;
-      gap: 14px;
+      gap: 18px;
     }
     .pagination-group[hidden] { display: none; }
     .section-title {
@@ -340,12 +350,12 @@ export function renderApp(basePath = ""): string {
     .grid-2 {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
+      gap: 18px;
     }
     .grid-3 {
       display: grid;
       grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
+      gap: 18px;
     }
     label {
       display: grid;
@@ -482,7 +492,7 @@ export function renderApp(basePath = ""): string {
     .actions {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 12px;
       align-items: center;
     }
     .link-row {
@@ -502,7 +512,7 @@ export function renderApp(basePath = ""): string {
       background: var(--blue-soft);
       color: #01418d;
       border-radius: var(--radius-md);
-      padding: 10px;
+      padding: 14px;
       font-size: 12px;
       font-weight: 500;
     }
@@ -564,11 +574,35 @@ export function renderApp(basePath = ""): string {
     }
     .url-box {
       display: grid;
-      gap: 8px;
-      padding: 10px;
+      gap: 12px;
+      padding: 16px;
       border: 0.5px solid var(--border);
       border-radius: var(--radius-md);
       background: var(--surface-soft);
+    }
+    .breakout {
+      display: grid;
+      gap: 16px;
+      padding: 18px;
+      border: 0.5px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      background: var(--surface-soft);
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+    .info-card {
+      display: grid;
+      gap: 10px;
+      padding: 18px;
+      border: 0.5px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+    }
+    .info-card strong {
+      font-size: 14px;
     }
     .prompt-box {
       min-height: 220px;
@@ -626,13 +660,13 @@ export function renderApp(basePath = ""): string {
     .volume { color: var(--action); font-size: 12px; font-weight: 600; }
     .metrics {
       display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 8px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
     }
     .metric {
       border: 0.5px solid var(--border-soft);
       border-radius: var(--radius-md);
-      padding: 10px;
+      padding: 16px;
       background: var(--surface-soft);
     }
     .metric span {
@@ -661,33 +695,57 @@ export function renderApp(basePath = ""): string {
     .chart {
       display: flex;
       align-items: end;
-      gap: 6px;
-      min-height: 96px;
-      padding: 10px;
+      gap: 8px;
+      min-height: 150px;
+      padding: 18px;
       border: 0.5px solid var(--border-soft);
       border-radius: var(--radius-md);
       background: var(--surface-soft);
       overflow: auto;
     }
     .bar {
-      width: 18px;
+      width: 22px;
       min-height: 2px;
       border-radius: 3px 3px 0 0;
       background: var(--action);
       flex: none;
+      position: relative;
+    }
+    .bar:hover,
+    .bar:focus {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
+    }
+    .bar:hover::after,
+    .bar:focus::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 50%;
+      bottom: calc(100% + 10px);
+      transform: translateX(-50%);
+      z-index: 20;
+      width: 220px;
+      padding: 9px 10px;
+      border-radius: var(--radius-md);
+      background: var(--content);
+      color: #fff;
+      box-shadow: 0 8px 20px rgba(20, 24, 35, 0.18);
+      font-size: 12px;
+      line-height: 1.35;
+      white-space: normal;
     }
     .trace {
       display: grid;
-      gap: 6px;
-      max-height: 220px;
+      gap: 8px;
+      max-height: 320px;
       overflow: auto;
     }
     .trace-row {
       display: grid;
       grid-template-columns: 48px 70px 84px 84px minmax(0, 1fr);
-      gap: 8px;
+      gap: 10px;
       align-items: center;
-      padding: 7px 8px;
+      padding: 10px 12px;
       border: 0.5px solid var(--border-soft);
       border-radius: var(--radius-sm);
       background: var(--surface-soft);
@@ -698,13 +756,47 @@ export function renderApp(basePath = ""): string {
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(22, 24, 31, 0.42);
+    }
+    .modal-backdrop[hidden] { display: none; }
+    .modal {
+      width: min(640px, 100%);
+      max-height: min(86vh, 760px);
+      overflow: auto;
+      display: grid;
+      gap: 22px;
+      border-radius: var(--radius-lg);
+      border: 0.5px solid var(--border);
+      background: var(--surface);
+      padding: 28px;
+      box-shadow: 0 22px 70px rgba(20, 24, 35, 0.24);
+    }
+    .modal-head {
+      display: grid;
+      gap: 8px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding-top: 4px;
+    }
     @media (max-width: 980px) {
-      .app-view { padding: 14px; }
+      .app-view { padding: 18px; }
       .view-head, .runner-card { grid-template-columns: 1fr; }
       .view-head { display: grid; }
-      .overview, .runner-metrics, .progress, .detail-grid, .review-grid { grid-template-columns: 1fr; }
+      .overview, .runner-metrics, .progress, .detail-grid, .review-grid, .metrics, .info-grid { grid-template-columns: 1fr; }
       .grid-2, .grid-3 { grid-template-columns: 1fr; }
       .header-row { grid-template-columns: 1fr; }
+      .modal-backdrop { padding: 14px; place-items: stretch; }
     }
   </style>
 </head>
@@ -730,15 +822,12 @@ export function renderApp(basePath = ""): string {
           <h2>API Pagination Runners</h2>
           <div class="view-subtitle">Configure once, use everywhere. Runtime credentials stay in Clay.</div>
         </div>
-        <button id="newBtn" class="primary" type="button">Create New Runner</button>
-      </div>
-      <div id="listStatus" class="status"></div>
-      <div class="notice">
-        <div class="grid-2">
-          <label><span class="label-row">Admin token <span class="help" tabindex="0" data-tooltip="Required for creating, testing, listing, and viewing runner configs. It is stored only in this browser's local storage and sent as x-admin-token.">?</span></span><input id="adminToken" type="password" autocomplete="off" placeholder="Paste admin token"></label>
-          <div class="actions" style="align-self:end;"><button id="saveAdminTokenBtn" type="button">Save token</button><button id="clearAdminTokenBtn" type="button">Clear token</button><span id="adminTokenStatus" class="hint"></span></div>
+        <div class="view-actions">
+          <button id="adminAccessBtn" type="button">Admin token</button>
+          <button id="newBtn" class="primary" type="button">Create New Runner</button>
         </div>
       </div>
+      <div id="listStatus" class="status"></div>
       <div id="listLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading saved runners...</span></div>
       <div class="overview">
         <div class="overview-card"><div class="overview-icon">A</div><div><span>Active runners</span><strong id="overviewRunnerCount">0</strong></div></div>
@@ -758,7 +847,7 @@ export function renderApp(basePath = ""): string {
           <h2>Create New Runner</h2>
           <div id="createSubtitle" class="view-subtitle">Let AI help you configure from documentation.</div>
         </div>
-        <button id="newBtnSecondary" type="button">Reset</button>
+        <div class="view-actions"><button id="newBtnSecondary" type="button">Reset form</button></div>
       </div>
       <div class="wizard-wrap">
         <div class="progress">
@@ -987,7 +1076,10 @@ export function renderApp(basePath = ""): string {
           <h2 id="detailName">Runner details</h2>
           <div class="view-subtitle"><span id="detailMethod" class="badge"></span> <span id="detailPagination" class="badge"></span></div>
         </div>
-        <button id="refreshBtn" type="button">Refresh</button>
+        <div class="view-actions">
+          <button id="openAnalyticsBtn" type="button">Open analytics</button>
+          <button id="refreshBtn" type="button">Refresh</button>
+        </div>
       </div>
       <div id="detailStatus" class="status"></div>
       <div id="detailLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading runner details...</span></div>
@@ -1001,23 +1093,6 @@ export function renderApp(basePath = ""): string {
                 <div class="actions"><button id="detailCopyBtn" type="button">Copy URL</button><button id="detailCopySetupBtn" type="button">Copy Clay setup</button></div>
               </div>
               <div id="detailClaySetup" class="notice"></div>
-              <div class="notice warning">
-                <strong>Runner access token</strong>
-                <div class="hint">Tokens are only emailed to <code>@clay.com</code> addresses. The token is not shown in the app and is never forwarded to the upstream API.</div>
-                <div id="runnerTokenMeta" class="hint"></div>
-                <div class="grid-2">
-                  <label><span class="label-row">Clay email <span class="help" tabindex="0" data-tooltip="Only clay.com email addresses can receive runner tokens.">?</span></span><input id="runnerTokenEmail" type="email" autocomplete="off" placeholder="name@clay.com"></label>
-                  <div class="actions" style="align-self:end;"><button id="emailRunnerTokenBtn" type="button">Email token</button><button id="generateRunnerTokenBtn" type="button">Generate and email token</button></div>
-                </div>
-                <div class="notice locked">
-                  <strong>Regeneration warnings</strong>
-                  <div>Regenerating replaces the token for this runner. Clay Signals and workflows using the old token will fail until each one is updated. Do this only during a planned change window.</div>
-                  <label><span class="label-row">Confirmation phrase</span><input id="runnerTokenConfirm" autocomplete="off" placeholder="Type REGENERATE RUNNER TOKEN"></label>
-                  <label class="label-row"><input id="runnerTokenAck" type="checkbox"> I understand this can offline active Signals using the current token.</label>
-                  <div class="actions"><button id="regenerateRunnerTokenBtn" class="danger" type="button">Regenerate and email new token</button></div>
-                </div>
-                <div id="runnerTokenStatus" class="status"></div>
-              </div>
               <div class="link-row">
                 <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/index.ts" target="_blank" rel="noreferrer">Worker routes</a>
                 <a href="https://github.com/chrisrcardone/clay-paginate/blob/main/src/pagination.ts" target="_blank" rel="noreferrer">Pagination logic</a>
@@ -1025,6 +1100,36 @@ export function renderApp(basePath = ""): string {
               </div>
             </div>
           </section>
+
+          <section class="panel">
+            <div class="panel-head"><h2>Runner Access</h2></div>
+            <div class="panel-body">
+              <div class="info-grid">
+                <div class="info-card">
+                  <strong>Static IP path</strong>
+                  <div class="hint">If this runner is being called from a Clay surface where static IP egress is enabled and the request comes through the allowed Clay static IPs, no runner token is needed.</div>
+                </div>
+                <div class="info-card">
+                  <strong>Signals and non-static-IP surfaces</strong>
+                  <div class="hint">If the Clay surface does not support static IP egress, such as Signals, use a runner token. The token is emailed only to a <code>@clay.com</code> address and is sent as <code>x-clay-paginate-token</code>.</div>
+                </div>
+              </div>
+              <div class="breakout">
+                <div>
+                  <strong>Token status</strong>
+                  <div id="runnerTokenMeta" class="hint"></div>
+                </div>
+                <div class="actions">
+                  <button id="openTokenEmailModalBtn" type="button">Email token</button>
+                  <button id="openTokenGenerateModalBtn" type="button">Generate token</button>
+                  <button id="openTokenRegenerateModalBtn" type="button">Review rotation warnings</button>
+                </div>
+                <div id="runnerTokenRotationCue" class="hint">If a token is compromised or needs to be rotated, review the regeneration warnings first. The destructive action only appears inside the confirmation modal.</div>
+                <div id="runnerTokenStatus" class="status"></div>
+              </div>
+            </div>
+          </section>
+
           <section class="panel">
             <div class="panel-head"><h2>Configuration Details</h2></div>
             <div class="panel-body">
@@ -1040,42 +1145,115 @@ export function renderApp(basePath = ""): string {
               <div class="notice locked">Saved runners are immutable. Create a new runner for changes.</div>
             </div>
           </section>
-          <section class="panel">
-            <div class="panel-head"><h2>Recent Runs</h2></div>
-            <div class="panel-body"><div id="detailRecentRuns" class="trace"></div></div>
-          </section>
         </div>
-        <section id="analyticsPanel" class="panel" hidden>
-          <div class="panel-head">
-            <h2>Analytics</h2>
-            <button id="analyticsRefreshBtn" type="button">Refresh</button>
-          </div>
-          <div class="panel-body">
-            <div id="analyticsLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading analytics...</span></div>
-            <div class="metrics">
-              <div class="metric"><span>Total calls</span><strong id="metricTotalRuns">0</strong></div>
-              <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
-              <div class="metric"><span>Items returned</span><strong id="metricItems">0</strong></div>
-              <div class="metric"><span>Avg duration</span><strong id="metricDuration">0 ms</strong></div>
-              <div class="metric"><span>Avg pages</span><strong id="metricAvgPages">0</strong></div>
-              <div class="metric"><span>Retries</span><strong id="metricRetries">0</strong></div>
-            </div>
-            <div id="statusCounts" class="actions"></div>
-            <div id="stopCounts" class="actions"></div>
-            <div id="errorCounts" class="actions"></div>
-            <div id="statusChart" class="chart"></div>
-            <div id="volumeChart" class="chart"></div>
-            <div id="recentRuns" class="hint"></div>
-          </div>
-        </section>
       </div>
     </section>
+
+    <section id="analyticsView" class="app-view" hidden>
+      <div class="view-head">
+        <div>
+          <button id="analyticsBackBtn" type="button">Back to Runner</button>
+          <h2 id="analyticsTitle">Runner analytics</h2>
+          <div class="view-subtitle">Operational patterns for the selected runner, with metadata-only storage.</div>
+        </div>
+        <div class="view-actions"><button id="analyticsRefreshBtn" type="button">Refresh analytics</button></div>
+      </div>
+      <div id="analyticsStatus" class="status"></div>
+      <section id="analyticsPanel" class="panel" hidden>
+        <div class="panel-body">
+          <div id="analyticsLoading" class="loading-line" hidden><span class="spinner"></span><span>Loading analytics...</span></div>
+          <div class="notice">
+            <strong>What analytics store</strong>
+            <div class="hint">D1 stores only operational metadata: run mode, success or error, page count, item count, duration, upstream status code, stop reason, retry count, timestamp, and coarse error code.</div>
+            <div class="hint">It does not store Clay request headers, credential values, query parameters, request bodies, upstream page URLs, upstream response rows, upstream response bodies, full upstream error bodies, or debug traces.</div>
+          </div>
+          <div class="metrics">
+            <div class="metric"><span>Total calls</span><strong id="metricTotalRuns">0</strong></div>
+            <div class="metric"><span>Clay calls</span><strong id="metricClayRuns">0</strong></div>
+            <div class="metric"><span>Items returned</span><strong id="metricItems">0</strong></div>
+            <div class="metric"><span>Avg duration</span><strong id="metricDuration">0 ms</strong></div>
+            <div class="metric"><span>Avg pages</span><strong id="metricAvgPages">0</strong></div>
+            <div class="metric"><span>Retries</span><strong id="metricRetries">0</strong></div>
+          </div>
+          <div class="breakout">
+            <h3>Status codes over time</h3>
+            <div id="statusCounts" class="actions"></div>
+            <div id="statusChart" class="chart"></div>
+          </div>
+          <div class="breakout">
+            <h3>Call volume over time</h3>
+            <div id="volumeChart" class="chart"></div>
+          </div>
+          <div class="breakout">
+            <h3>Stop and error patterns</h3>
+            <div id="stopCounts" class="actions"></div>
+            <div id="errorCounts" class="actions"></div>
+            <div id="recentRuns" class="hint"></div>
+          </div>
+          <div class="breakout">
+            <h3>Recent runs</h3>
+            <div id="detailRecentRuns" class="trace"></div>
+          </div>
+        </div>
+      </section>
+    </section>
   </main>
+
+  <div id="adminTokenModal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adminTokenModalTitle">
+      <div class="modal-head">
+        <h2 id="adminTokenModalTitle">Admin token required</h2>
+        <div class="hint">This app needs the admin token before it can list, create, test, view, or email runner credentials. The token is stored in the Clay 1Password and is saved only in this browser's local storage after you paste it here.</div>
+      </div>
+      <label><span class="label-row">Admin token</span><input id="adminToken" type="password" autocomplete="off" placeholder="Paste the token from Clay 1Password"></label>
+      <div id="adminTokenStatus" class="status"></div>
+      <div class="modal-actions">
+        <button id="clearAdminTokenBtn" type="button">Clear saved token</button>
+        <button id="closeAdminTokenModalBtn" type="button">Close</button>
+        <button id="saveAdminTokenBtn" class="primary" type="button">Save token</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="runnerTokenModal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="runnerTokenModalTitle">
+      <div class="modal-head">
+        <h2 id="runnerTokenModalTitle">Email runner token</h2>
+        <div id="runnerTokenModalCopy" class="hint"></div>
+      </div>
+      <label><span class="label-row">Clay email</span><input id="runnerTokenModalEmail" type="email" autocomplete="off" placeholder="name@clay.com"></label>
+      <div class="notice">The token is sent from <code>no-reply@chris-apis.xyz</code>. It is for calling this pagination runner only and is stripped before upstream API requests.</div>
+      <div class="modal-actions">
+        <button id="cancelRunnerTokenModalBtn" type="button">Cancel</button>
+        <button id="confirmRunnerTokenEmailBtn" class="primary" type="button">Email token</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="runnerTokenRegenModal" class="modal-backdrop" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="runnerTokenRegenTitle">
+      <div class="modal-head">
+        <h2 id="runnerTokenRegenTitle">Regenerate runner token</h2>
+        <div class="hint">Regenerating replaces the token for this runner. Any active Clay Signals or workflows using the old token will fail until every one is updated.</div>
+      </div>
+      <div class="notice locked">
+        <strong>Before continuing</strong>
+        <div>Use this only during a planned change window. Confirm that you can update every live Signal or HTTP source that calls this runner.</div>
+      </div>
+      <label><span class="label-row">Clay email</span><input id="runnerTokenRegenEmail" type="email" autocomplete="off" placeholder="name@clay.com"></label>
+      <label><span class="label-row">Confirmation phrase</span><input id="runnerTokenConfirm" autocomplete="off" placeholder="Type REGENERATE RUNNER TOKEN"></label>
+      <label class="label-row"><input id="runnerTokenAck" type="checkbox"> I understand this can offline active Signals using the current token.</label>
+      <div class="modal-actions">
+        <button id="cancelRunnerTokenRegenBtn" type="button">Cancel</button>
+        <button id="confirmRunnerTokenRegenBtn" class="danger" type="button">Regenerate and email token</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const BASE_PATH = ${JSON.stringify(basePath)};
     const ADMIN_TOKEN_STORAGE_KEY = "clay-pagination-admin-token";
-    const state = { id: null, locked: false, view: "list", step: "ai", lastTestOk: false, configs: [], detailRunUrl: "" };
+    const state = { id: null, locked: false, view: "list", step: "ai", lastTestOk: false, configs: [], detailRunUrl: "", runnerTokenGenerate: false };
     const $ = (id) => document.getElementById(id);
     const editableIds = ["name","method","targetUrl","resultPath","responseMode","maxItems","paginationType","maxPages","pageSize","pageParam","pageSizeParam","startPage","nextLinkPath","totalPagesPath","offsetParam","limitParam","startOffset","cursorParam","nextCursorPath","initialCursor","shapeMode","shapeFields","delayMs","retryAttempts","timeoutMs","retryStatuses","maxDurationMs","maxResponseBytes","respectRetryAfter","stopOnEmptyPage","stopOnRepeatedNext","stopOnDuplicateItemId","itemIdPath","passThroughHeaders","bodyTemplate"];
     const defaults = {
@@ -1186,7 +1364,7 @@ export function renderApp(basePath = ""): string {
 
     function setStatus(message, ok = true) {
       const text = message && !ok ? "[" + formatClock(new Date()) + "] " + message : message;
-      ["status", "flowStatus", "listStatus", "detailStatus"].forEach((id) => {
+      ["status", "flowStatus", "listStatus", "detailStatus", "analyticsStatus"].forEach((id) => {
         const element = $(id);
         if (!element) return;
         element.textContent = text;
@@ -1256,6 +1434,9 @@ export function renderApp(basePath = ""): string {
       }
       setStatus(context + " failed: " + message, false);
       print({ error: message, context, receivedAt, status, response: body || null });
+      if (error?.status === 401 || error?.status === 503) {
+        showAdminTokenModal(true);
+      }
     }
 
     function updateUrlShape() {
@@ -1280,6 +1461,24 @@ export function renderApp(basePath = ""): string {
       const saved = Boolean(localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY));
       $("adminToken").placeholder = saved ? "Admin token saved in this browser" : "Paste admin token";
       setAdminTokenStatus(saved ? "Token saved." : "Token required for admin actions.");
+      $("adminAccessBtn").textContent = saved ? "Admin token saved" : "Admin token required";
+      $("closeAdminTokenModalBtn").hidden = !saved;
+    }
+
+    function showAdminTokenModal(force = false) {
+      const saved = Boolean(localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY));
+      if (!force && saved) return;
+      hydrateAdminTokenState();
+      $("adminTokenModal").hidden = false;
+      setTimeout(() => $("adminToken").focus(), 0);
+    }
+
+    function closeAdminTokenModal() {
+      if (!localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)) {
+        setAdminTokenStatus("Paste the token from Clay 1Password to continue.", false);
+        return;
+      }
+      $("adminTokenModal").hidden = true;
     }
 
     function showView(view) {
@@ -1287,6 +1486,7 @@ export function renderApp(basePath = ""): string {
       $("listView").hidden = view !== "list";
       $("createView").hidden = view !== "create";
       $("detailsView").hidden = view !== "details";
+      $("analyticsView").hidden = view !== "analytics";
       if (view === "create") setWizardStep(state.step || "ai");
       window.scrollTo({ top: 0, behavior: "auto" });
     }
@@ -2356,11 +2556,14 @@ export function renderApp(basePath = ""): string {
 
     function renderRunnerTokenStatus(status) {
       const meta = $("runnerTokenMeta");
-      const emailBtn = $("emailRunnerTokenBtn");
-      const generateBtn = $("generateRunnerTokenBtn");
+      const emailBtn = $("openTokenEmailModalBtn");
+      const generateBtn = $("openTokenGenerateModalBtn");
+      const regenerateBtn = $("openTokenRegenerateModalBtn");
       const exists = Boolean(status?.exists);
       emailBtn.hidden = !exists;
       generateBtn.hidden = exists;
+      regenerateBtn.hidden = !exists;
+      $("runnerTokenRotationCue").hidden = !exists;
       const parts = [];
       parts.push(exists ? "Token generated." : "No runner token generated yet.");
       if (status?.emailedAt) parts.push("Last emailed " + formatFullTimestamp(status.emailedAt) + ".");
@@ -2395,11 +2598,17 @@ export function renderApp(basePath = ""): string {
         $("detailPageSize").textContent = detail.config.pagination?.pageSize || "Not set";
         $("detailShapeMode").textContent = detail.config.responseShape?.mode || "raw";
         renderRunnerTokenStatus(detail.runnerToken);
+        $("analyticsTitle").textContent = detail.config.name + " analytics";
         showView("details");
-        await refreshAnalytics();
       } finally {
         setLoadingLine(loadingId, false);
       }
+    }
+
+    async function openAnalytics() {
+      if (!state.id) return;
+      showView("analytics");
+      await refreshAnalytics();
     }
 
     async function refreshAnalytics() {
@@ -2417,14 +2626,35 @@ export function renderApp(basePath = ""): string {
       }
     }
 
-    async function emailRunnerToken(generateIfMissing = false) {
+    function openRunnerTokenModal(generateIfMissing = false) {
+      state.runnerTokenGenerate = generateIfMissing;
+      $("runnerTokenModalTitle").textContent = generateIfMissing ? "Generate and email runner token" : "Email runner token";
+      $("runnerTokenModalCopy").textContent = generateIfMissing
+        ? "No token exists for this runner yet. Enter a clay.com email and the app will generate one, email it, and keep only the encrypted token record."
+        : "Enter a clay.com email to receive the current runner token. Static-IP callers do not need this token.";
+      $("confirmRunnerTokenEmailBtn").textContent = generateIfMissing ? "Generate and email token" : "Email token";
+      $("runnerTokenModal").hidden = false;
+      setTimeout(() => $("runnerTokenModalEmail").focus(), 0);
+    }
+
+    function openRunnerTokenRegenModal() {
+      $("runnerTokenRegenModal").hidden = false;
+      setTimeout(() => $("runnerTokenRegenEmail").focus(), 0);
+    }
+
+    function closeRunnerTokenModals() {
+      $("runnerTokenModal").hidden = true;
+      $("runnerTokenRegenModal").hidden = true;
+    }
+
+    async function emailRunnerToken(generateIfMissing = state.runnerTokenGenerate) {
       if (!state.id) return;
-      const email = $("runnerTokenEmail").value.trim();
+      const email = $("runnerTokenModalEmail").value.trim();
       if (!email) {
         setRunnerTokenStatus("Enter a clay.com email address first.", false);
         return;
       }
-      const buttonId = generateIfMissing ? "generateRunnerTokenBtn" : "emailRunnerTokenBtn";
+      const buttonId = "confirmRunnerTokenEmailBtn";
       setRunnerTokenStatus(generateIfMissing ? "Generating and emailing token..." : "Emailing token...");
       setButtonBusy(buttonId, true, generateIfMissing ? "Generating" : "Emailing");
       try {
@@ -2434,6 +2664,8 @@ export function renderApp(basePath = ""): string {
         });
         renderRunnerTokenStatus(body.runnerToken);
         setRunnerTokenStatus("Runner token emailed to " + body.recipient + ".");
+        $("runnerTokenModalEmail").value = "";
+        closeRunnerTokenModals();
       } finally {
         setButtonBusy(buttonId, false);
       }
@@ -2441,7 +2673,7 @@ export function renderApp(basePath = ""): string {
 
     async function regenerateRunnerToken() {
       if (!state.id) return;
-      const email = $("runnerTokenEmail").value.trim();
+      const email = $("runnerTokenRegenEmail").value.trim();
       const confirmation = $("runnerTokenConfirm").value.trim();
       const acknowledgeOffline = $("runnerTokenAck").checked;
       if (!email) {
@@ -2449,18 +2681,20 @@ export function renderApp(basePath = ""): string {
         return;
       }
       setRunnerTokenStatus("Regenerating token...");
-      setButtonBusy("regenerateRunnerTokenBtn", true, "Regenerating");
+      setButtonBusy("confirmRunnerTokenRegenBtn", true, "Regenerating");
       try {
         const body = await api("/api/configs/" + state.id + "/runner-token/regenerate", {
           method: "POST",
           body: JSON.stringify({ email, confirmation, acknowledgeOffline })
         });
+        $("runnerTokenRegenEmail").value = "";
         $("runnerTokenConfirm").value = "";
         $("runnerTokenAck").checked = false;
         renderRunnerTokenStatus(body.runnerToken);
         setRunnerTokenStatus("New runner token emailed to " + body.recipient + ". Update every active Clay Signal using the old token.");
+        closeRunnerTokenModals();
       } finally {
-        setButtonBusy("regenerateRunnerTokenBtn", false);
+        setButtonBusy("confirmRunnerTokenRegenBtn", false);
       }
     }
 
@@ -2531,7 +2765,10 @@ export function renderApp(basePath = ""): string {
         const bar = document.createElement("div");
         bar.className = "bar";
         bar.style.height = Math.max(4, Math.round((point.count / max) * 74)) + "px";
-        bar.title = point.bucket + " · " + point.statusCode + " · " + point.count;
+        const detail = point.bucket + "\\nStatus " + point.statusCode + "\\n" + point.count + " call(s)";
+        bar.title = detail;
+        bar.dataset.tooltip = detail;
+        bar.tabIndex = 0;
         if (String(point.statusCode).startsWith("4")) bar.style.background = "#f58c50";
         if (String(point.statusCode).startsWith("5")) bar.style.background = "#dd2c53";
         chart.appendChild(bar);
@@ -2550,7 +2787,10 @@ export function renderApp(basePath = ""): string {
         const bar = document.createElement("div");
         bar.className = "bar";
         bar.style.height = Math.max(4, Math.round((point.calls / max) * 74)) + "px";
-        bar.title = point.bucket + " · " + point.calls + " calls · " + point.items + " items · " + point.pages + " pages";
+        const detail = point.bucket + "\\n" + point.calls + " call(s)\\n" + point.items + " item(s)\\n" + point.pages + " page(s)\\nAvg " + (point.avgDurationMs || 0) + " ms";
+        bar.title = detail;
+        bar.dataset.tooltip = detail;
+        bar.tabIndex = 0;
         chart.appendChild(bar);
       });
     }
@@ -2562,6 +2802,7 @@ export function renderApp(basePath = ""): string {
 
     $("newBtn").addEventListener("click", resetCreateFlow);
     $("newBtnSecondary").addEventListener("click", resetCreateFlow);
+    $("adminAccessBtn").addEventListener("click", () => showAdminTokenModal(true));
     $("saveAdminTokenBtn").addEventListener("click", () => {
       const token = $("adminToken").value.trim();
       if (!token) {
@@ -2571,6 +2812,7 @@ export function renderApp(basePath = ""): string {
       localStorage.setItem(ADMIN_TOKEN_STORAGE_KEY, token);
       $("adminToken").value = "";
       hydrateAdminTokenState();
+      $("adminTokenModal").hidden = true;
       refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
     });
     $("clearAdminTokenBtn").addEventListener("click", () => {
@@ -2578,7 +2820,9 @@ export function renderApp(basePath = ""): string {
       $("adminToken").value = "";
       hydrateAdminTokenState();
       setAdminTokenStatus("Token cleared.");
+      showAdminTokenModal(true);
     });
+    $("closeAdminTokenModalBtn").addEventListener("click", closeAdminTokenModal);
     $("backToListBtn").addEventListener("click", () => {
       refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
       showView("list");
@@ -2587,6 +2831,7 @@ export function renderApp(basePath = ""): string {
       refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
       showView("list");
     });
+    $("analyticsBackBtn").addEventListener("click", () => showView("details"));
     $("skipAiBtn").addEventListener("click", () => setWizardStep("configure"));
     $("aiContinueBtn").addEventListener("click", () => setWizardStep("configure"));
     $("configureBackBtn").addEventListener("click", () => setWizardStep("ai"));
@@ -2613,10 +2858,15 @@ export function renderApp(basePath = ""): string {
       const action = state.view === "details" && state.id ? openDetails(state.id) : refreshList();
       action.catch((error) => handleUiError(error, "Refresh", { showLastError: state.view === "create" }));
     });
+    $("openAnalyticsBtn").addEventListener("click", () => openAnalytics().catch((error) => handleUiError(error, "Loading analytics", { showLastError: false })));
     $("analyticsRefreshBtn").addEventListener("click", () => refreshAnalytics().catch((error) => handleUiError(error, "Loading analytics", { showLastError: false })));
-    $("emailRunnerTokenBtn").addEventListener("click", () => emailRunnerToken(false).catch((error) => handleUiError(error, "Emailing runner token", { showLastError: false })));
-    $("generateRunnerTokenBtn").addEventListener("click", () => emailRunnerToken(true).catch((error) => handleUiError(error, "Generating runner token", { showLastError: false })));
-    $("regenerateRunnerTokenBtn").addEventListener("click", () => regenerateRunnerToken().catch((error) => handleUiError(error, "Regenerating runner token", { showLastError: false })));
+    $("openTokenEmailModalBtn").addEventListener("click", () => openRunnerTokenModal(false));
+    $("openTokenGenerateModalBtn").addEventListener("click", () => openRunnerTokenModal(true));
+    $("openTokenRegenerateModalBtn").addEventListener("click", openRunnerTokenRegenModal);
+    $("cancelRunnerTokenModalBtn").addEventListener("click", closeRunnerTokenModals);
+    $("cancelRunnerTokenRegenBtn").addEventListener("click", closeRunnerTokenModals);
+    $("confirmRunnerTokenEmailBtn").addEventListener("click", () => emailRunnerToken().catch((error) => handleUiError(error, "Emailing runner token", { showLastError: false })));
+    $("confirmRunnerTokenRegenBtn").addEventListener("click", () => regenerateRunnerToken().catch((error) => handleUiError(error, "Regenerating runner token", { showLastError: false })));
     $("addStaticHeader").addEventListener("click", () => { addHeaderRow("staticHeaders"); markConfigDirty(); });
     $("addCredentialHeader").addEventListener("click", () => { addHeaderRow("credentialHeaders"); markConfigDirty(); });
     $("paginationType").addEventListener("change", () => { updatePaginationFields(); markConfigDirty(); });
@@ -2668,7 +2918,11 @@ export function renderApp(basePath = ""): string {
     setHeaderRows("credentialHeaders", [{ name: "Authorization", value: "" }]);
     updateUrlShape();
     hydrateAdminTokenState();
-    refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
+    if (localStorage.getItem(ADMIN_TOKEN_STORAGE_KEY)) {
+      refreshList().catch((error) => handleUiError(error, "Loading runners", { showLastError: false }));
+    } else {
+      showAdminTokenModal(true);
+    }
   </script>
 </body>
 </html>`;
